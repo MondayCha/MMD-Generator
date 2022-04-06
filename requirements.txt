@@ -1,0 +1,3 @@
+-r requirements-pipreqs.txt
+apispec
+marshmallow-sqlalchemy
