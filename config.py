@@ -14,7 +14,11 @@ class Config(object):
     UPLOAD_DIR = path.join(basedir, 'media')
 
     # Map-Matching SDK
-    MATCH_SDK_PATH = '/map-matching-main.jar'
+    SDK_ENTRYPONIT_PATH = '~/Documents/map-matching/map_matching/build/libs/map_matching-all.jar'
+    GRAPHHOPPER_LOCATION_PATH = '/tmp/graphhopper'
+    OSM_FILE_PATH = '~/Documents/data/beijing2.osm.gz'
+    INPUT_PATH = '~/Documents/data/input'
+    OUTPUT_PATH = '~/Documents/data/output'
 
     # SQLALCHEMY
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + path.join(basedir, 'app.db')
