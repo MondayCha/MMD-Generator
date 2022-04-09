@@ -1,0 +1,81 @@
+{
+  "name": "mmd-generator-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.8.1",
+    "@emotion/styled": "^11.8.1",
+    "@loadable/component": "^5.15.2",
+    "@testing-library/jest-dom": "^5.14.1",
+    "@testing-library/react": "^12.0.0",
+    "@testing-library/user-event": "^13.2.1",
+    "@types/jest": "^27.0.1",
+    "@types/node": "^16.7.13",
+    "@types/react": "^17.0.43",
+    "@types/react-dom": "^17.0.14",
+    "axios": "^0.26.0",
+    "flooks": "5.1.1",
+    "i18next": "^21.6.14",
+    "leaflet": "^1.7.1",
+    "lodash": "^4.17.21",
+    "loglevel": "^1.8.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-dropzone": "^12.0.4",
+    "react-hot-toast": "^2.2.0",
+    "react-i18next": "^11.15.6",
+    "react-leaflet": "4",
+    "react-router-dom": "6",
+    "react-scripts": "^5.0.0",
+    "tabler-icons-react": "^1.39.0",
+    "typescript": "^4.6.3",
+    "uuid": "^8.3.2",
+    "web-vitals": "^2.1.0"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "set GENERATE_SOURCEMAP=false && craco build",
+    "test": "craco test",
+    "eject": "react-scripts eject",
+    "prepare": "husky install"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest",
+      "prettier"
+    ]
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^16.2.1",
+    "@commitlint/config-conventional": "^16.2.1",
+    "@craco/craco": "^6.4.3",
+    "@types/leaflet": "^1.7.9",
+    "@types/lodash": "^4.14.180",
+    "@types/uuid": "^8.3.4",
+    "autoprefixer": "^10.4.4",
+    "craco-alias": "^3.0.1",
+    "daisyui": "^2.11.1",
+    "eslint-config-prettier": "^8.5.0",
+    "husky": "^7.0.4",
+    "lint-staged": "^12.3.5",
+    "postcss": "^8.4.12",
+    "prettier": "2.5.1",
+    "tailwindcss": "^3.0.23"
+  }
+}

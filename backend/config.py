@@ -17,7 +17,7 @@ class Config(object):
     SDK_ENTRYPONIT_PATH = '~/documents/map-matching/map_matching/build/libs/map_matching-all.jar'
     GRAPHHOPPER_LOCATION_PATH = '/tmp/graphhopper'
     OSM_FILE_PATH = '~/documents/data/beijing2.osm.gz'
-    MATCHING_METHODS = ['GHMapMatching', 'SimpleMapMatching', 'STMatching']
+    MATCHING_METHODS = ['STMatching', 'SimpleMapMatching', 'GHMapMatching']
 
     # SQLALCHEMY
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + path.join(basedir, 'app.db')

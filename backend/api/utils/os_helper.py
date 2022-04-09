@@ -10,6 +10,11 @@ def create_task_folder(task_id):
         shutil.rmtree(task_folder)
     os.makedirs(os.path.join(task_folder, 'input'))
     os.makedirs(os.path.join(task_folder, 'output'))
+    os.makedirs(os.path.join(task_folder, 'trajectory'))
+
+
+def get_task_path(task_id):
+    return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id))
 
 
 def get_input_path(task_id):
@@ -18,6 +23,10 @@ def get_input_path(task_id):
 
 def get_output_path(task_id):
     return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'output')
+
+
+def get_trajectory_path(task_id):
+    return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'trajectory')
 
 
 def cmd(command):

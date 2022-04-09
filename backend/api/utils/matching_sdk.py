@@ -12,7 +12,7 @@ def matching_sdk():
     input_path = get_input_path(current_task_id)
     output_path = get_output_path(current_task_id)
 
-    # call sdk to compress and decompress
+    # call sdk to matching
     for matching_method in matching_methods:
         matching_cmd = 'java -cp %s com.example.MatchingMain --graphHopperLocation %s --osmFile %s --output %s --matcher %s %s' % (
             current_app.config.get('SDK_ENTRYPONIT_PATH'), current_app.config.get('GRAPHHOPPER_LOCATION_PATH'), 

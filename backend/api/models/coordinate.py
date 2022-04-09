@@ -20,4 +20,10 @@ class Coordinate:
         return "%s %s" % (self.longitude, self.latitude)
 
     def __repr__(self):
-        return "< longitude: %s, latitude: %s >" % (self.longitude, self.latitude)
+        return "<lon: %s, lat: %s>" % (self.longitude, self.latitude)
+
+    def to_dict(self):
+        return {
+            'longitude': self.longitude,
+            'latitude': self.latitude
+        }

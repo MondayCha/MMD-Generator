@@ -1,0 +1,11 @@
+{
+  "app.name": "Map-Matching Dataset Generator",
+  "upload": {
+    "tips": "Upload a CSV file with GPS coordinates and generate a Map-Matching dataset.",
+    "subtips": "Drag and drop files here, or browse"
+  },
+  "button": {
+    "failed": "Failed",
+    "preview": "Preview"
+  }
+}
