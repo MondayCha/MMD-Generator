@@ -3,6 +3,10 @@ export interface CoordinateDetail {
   latitude: number;
 }
 
+export interface TCoordinateDetail extends CoordinateDetail {
+  timestamp: number;
+}
+
 export interface SubTrajectoryDetail {
   id: string;
   begin_index: number;
@@ -13,6 +17,7 @@ export interface SubTrajectoryDetail {
 export interface MatchingMethodDetail {
   name: string;
   unmatched_trajs: SubTrajectoryDetail[];
+  raw_traj: CoordinateDetail[];
 }
 
 export interface TrajectoryDetail {
@@ -22,6 +27,7 @@ export interface TrajectoryDetail {
     left_top: CoordinateDetail;
     right_bottom: CoordinateDetail;
   };
+  raw_traj: TCoordinateDetail[];
   matching_methods: MatchingMethodDetail[];
   common_trajs: SubTrajectoryDetail[];
 }

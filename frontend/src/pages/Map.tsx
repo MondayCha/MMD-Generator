@@ -8,17 +8,25 @@ import log from '@middleware/logger';
 import { useState, useEffect, useRef } from 'react';
 import { TrajectoryDetail, MatchingMethodDetail, SubTrajectoryDetail } from '@services/type';
 
-function getPathOptions(methodName?: string): PathOptions {
+function getPathOptions(methodName?: string, opacity?: number): PathOptions {
+  let color = '#ff0000';
   switch (methodName) {
     case 'GHMapMatching':
-      return { color: '#f59e0b', opacity: 0.5 };
+      color = '#f59e0b';
+      break;
     case 'SimpleMapMatching':
-      return { color: '#ef4444', opacity: 0.5 };
+      color = '#ef4444';
+      break;
     case 'STMatching':
-      return { color: '#06b6d4', opacity: 0.5 };
+      color = '#06b6d4';
+      break;
+    case 'RawTraj':
+      color = '#a855f7';
+      break;
     default:
-      return { color: '#22c55e', opacity: 0.5 };
+      color = '#22c55e';
   }
+  return { color: color, opacity: opacity ?? 0.7 };
 }
 
 export default function Map() {
@@ -29,6 +37,7 @@ export default function Map() {
   // const map = useMap();
   // Polyline Store
   const [commonPolylines, setCommonPolylines] = useState<LatLngExpression[][]>([]);
+  const [rawTraj, setRawTraj] = useState<LatLngExpression[]>([]);
   const [mapBounds, setMapBounds] = useState<LatLngBoundsExpression>([
     [39.92679854210712, 116.47209120858315],
     [39.94784807972859, 116.40273470506943],
@@ -36,7 +45,7 @@ export default function Map() {
 
   useEffect(() => {
     api.trajectory.getTrajectory(taskId, trajName).then(({ detail }) => {
-      let { matching_methods, common_trajs, bounds } = detail as TrajectoryDetail;
+      let { matching_methods, common_trajs, bounds, raw_traj } = detail as TrajectoryDetail;
       setCommonTrajs(common_trajs);
       setMatchingMethods(matching_methods);
       setCommonPolylines(
@@ -47,6 +56,14 @@ export default function Map() {
               lng: point.longitude,
             } as LatLngExpression;
           });
+        })
+      );
+      setRawTraj(
+        raw_traj.map((point) => {
+          return {
+            lat: point.latitude,
+            lng: point.longitude,
+          } as LatLngExpression;
         })
       );
       setMapBounds([
@@ -98,6 +115,9 @@ export default function Map() {
               subdomains={['1', '2', '3', '4']}
             />
           </LayersControl.BaseLayer>
+          <LayersControl.Overlay name="RawTraj">
+            <Polyline pathOptions={getPathOptions('RawTraj')} positions={rawTraj} />
+          </LayersControl.Overlay>
           <LayersControl.Overlay name="LCSS" checked={true}>
             <Polyline pathOptions={getPathOptions()} positions={commonPolylines} />
           </LayersControl.Overlay>
@@ -125,7 +145,7 @@ function MyComponent(props: {
 
   useEffect(() => {
     const { layersControlRef, matchingMethods } = props;
-    const matchingGroups: L.LayerGroup[] = [];
+    const matchingGroups: (L.LayerGroup | L.Polyline)[] = [];
     matchingMethods.forEach((method) => {
       const matchingGroup = L.layerGroup();
       method.unmatched_trajs.forEach((subTraj) => {
@@ -137,8 +157,19 @@ function MyComponent(props: {
         });
         L.polyline(latlngs, getPathOptions(method.name)).bindPopup(subTraj.id).addTo(matchingGroup);
       });
-      matchingGroups.push(matchingGroup);
       layersControlRef.current.addOverlay(matchingGroup, method.name);
+      matchingGroups.push(matchingGroup);
+      // let rawLatlngs = method.raw_traj.map((point) => {
+      //   return {
+      //     lat: point.latitude,
+      //     lng: point.longitude,
+      //   } as LatLngExpression;
+      // });
+      // let rawPolyline = L.polyline(rawLatlngs, getPathOptions(method.name, 0.3)).bindPopup(
+      //   method.name
+      // );
+      // layersControlRef.current.addOverlay(rawPolyline, `${method.name}Raw`);
+      // matchingGroups.push(rawPolyline);
     });
     return () => {
       matchingGroups.forEach((matchingGroup) => {

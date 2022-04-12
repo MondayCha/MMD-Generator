@@ -1,4 +1,4 @@
-from api.models.coordinate import Coordinate
+from api.models.coordinate import Coordinate, TimestampCoordinate
 
 
 class SubTrajectory:
@@ -30,6 +30,7 @@ class MatchingMethod:
         self.name: str = name
         self.path: str = path
         self.unmatched_trajs: list[SubTrajectory] = []
+        self.raw_traj: list[Coordinate] = []
     
     def __str__(self):
             return "< name: %s >" % (self.name)
@@ -40,7 +41,8 @@ class MatchingMethod:
     def to_dict(self):
         return {
             'name': self.name,
-            'unmatched_trajs': [failed_traj.to_dict() for failed_traj in self.unmatched_trajs]
+            'unmatched_trajs': [failed_traj.to_dict() for failed_traj in self.unmatched_trajs],
+            'raw_traj': [coordinate.to_dict() for coordinate in self.raw_traj]
         }
 
 
@@ -51,6 +53,7 @@ class Trajectory:
         self.success: bool = False
         self.matching_method_dict: dict[str, MatchingMethod] = {}
         self.common_trajs: list[SubTrajectory] = []
+        self.raw_traj: list[TimestampCoordinate] = []
 
     def __eq__(self, other):
         if type(other) != type(self):
@@ -95,5 +98,6 @@ class Trajectory:
                 }
             },
             "matching_methods": [matching_method.to_dict() for matching_method in self.matching_method_dict.values()],
-            "common_trajs": [success_traj.to_dict() for success_traj in self.common_trajs]
+            "common_trajs": [success_traj.to_dict() for success_traj in self.common_trajs],
+            "raw_traj": [coordinate.to_dict() for coordinate in self.raw_traj]
         }

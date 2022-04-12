@@ -141,7 +141,7 @@ function Home() {
           </button>
         </div>
       </div>
-      <div className="container m-0 px-6 pt-2">
+      <div className="m-0 px-6 pt-2">
         <div className="grid grid-cols-5 grid-flow-row gap-6">
           <div
             {...getRootProps({
