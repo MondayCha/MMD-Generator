@@ -14,6 +14,7 @@
     "@types/react": "^17.0.43",
     "@types/react-dom": "^17.0.14",
     "axios": "^0.26.0",
+    "deck.gl": "^8.7.5",
     "flooks": "5.1.1",
     "i18next": "^21.6.14",
     "leaflet": "^1.7.1",
@@ -24,7 +25,7 @@
     "react-dropzone": "^12.0.4",
     "react-hot-toast": "^2.2.0",
     "react-i18next": "^11.15.6",
-    "react-leaflet": "4",
+    "react-leaflet": "4.0.0-beta.0",
     "react-router-dom": "6",
     "react-scripts": "^5.0.0",
     "tabler-icons-react": "^1.39.0",
@@ -37,7 +38,7 @@
     "build": "set GENERATE_SOURCEMAP=false && craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
-    "prepare": "husky install"
+    "prepare": "cd .. && husky install frontend/.husky"
   },
   "eslintConfig": {
     "extends": [
