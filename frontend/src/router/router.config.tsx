@@ -14,6 +14,7 @@ import { RouteObject } from 'react-router-dom';
 
 const Home = React.lazy(() => import('@pages/Home'));
 const Map = React.lazy(() => import('@pages/Map'));
+const Deck = React.lazy(() => import('@pages/Deck'));
 
 export const routerConfig: RouteObject[] = [
   {
@@ -27,6 +28,10 @@ export const routerConfig: RouteObject[] = [
   {
     path: '/map/:taskId/:trajName',
     element: <Map />,
+  },
+  {
+    path: '/deck',
+    element: <Deck />,
   },
 ];
 
