@@ -84,6 +84,7 @@ class Trajectory:
                     bottom = float(coordinate.latitude)
                 if float(coordinate.latitude) > top:
                     top = float(coordinate.latitude)
+
         return {
             "name": self.name,
             "success": self.success,

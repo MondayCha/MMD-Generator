@@ -30,7 +30,7 @@ export const routerConfig: RouteObject[] = [
     element: <Map />,
   },
   {
-    path: '/deck',
+    path: '/deck/:taskId/:trajName',
     element: <Deck />,
   },
 ];

@@ -124,10 +124,12 @@ function Home() {
   });
 
   return (
-    <div className="bg-gray-100 dark:bg-slate-800 w-screen min-h-screen">
-      <div className="navbar bg-base-100 dark:bg-slate-700 mb-6 shadow-md">
+    <div className="bg-blue-100 dark:bg-slate-800 max-w-screen min-h-screen">
+      <div className="navbar bg-base-100 dark:bg-slate-700 mb-6 shadow-md px-6 lg:px-36">
         <div className="navbar-start">
-          <a className="btn btn-ghost normal-case text-xl dark:text-white">{t('app.name')}</a>
+          <a className="normal-case text-2xl text-slate-600 dark:text-white font-extrabold">
+            {t('app.name')}
+          </a>
         </div>
         <div className="navbar-end">
           <button
@@ -141,23 +143,59 @@ function Home() {
           </button>
         </div>
       </div>
-      <div className="m-0 px-6 pt-2">
-        <div className="grid grid-cols-5 grid-flow-row gap-6">
-          <div
-            {...getRootProps({
-              className: 'card col-span-5 bg-base-100 shadow-md dark:bg-slate-700',
-            })}
-          >
-            <input {...getInputProps()} />
-            <div className="card-body">
-              <div className="card-body flex items-center justify-center border-dashed border-4 border-slate-200 dark:border-slate-500">
-                <div className="dark:text-white text-2xl font-semibold text-center">
-                  {t('upload.tips')}
+      <div className="m-0 px-6 pt-2 pb-6 lg:px-36">
+        <div className="grid grid-cols-4 grid-flow-row gap-6">
+          <div className="card col-span-4 h-64 bg-base-100 shadow-md dark:bg-slate-700">
+            {matchingStatus === MatchingStatus.idling ||
+            matchingStatus === MatchingStatus.working ? (
+              <div
+                {...getRootProps({
+                  className: 'card-body',
+                })}
+              >
+                <input {...getInputProps()} />
+                <div className="card-body flex items-center justify-center border-dashed border-4 border-slate-200 dark:border-slate-500">
+                  <div className="dark:text-white text-2xl font-semibold text-center">
+                    {t('upload.tips')}
+                  </div>
+                  <div className="dark:text-white">{t('upload.subtips')}</div>
                 </div>
-                <div className="dark:text-white">{t('upload.subtips')}</div>
               </div>
-            </div>
+            ) : (
+              <div className="card-body">
+                <div className="card-body flex items-center justify-center border-dashed border-4 border-gray-200 dark:border-slate-500">
+                  <svg
+                    className="animate-[spin_1.5s_linear_infinite] my-2 h-16 w-16 text-gray-500 dark:text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-10"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <p className="text-gray-400 dark:text-slate-400 text-xl font-bold">
+                    {matchingStatus === MatchingStatus.uploading
+                      ? 'Uploading'
+                      : matchingStatus === MatchingStatus.waiting
+                      ? 'Waiting Server'
+                      : 'Downloading'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
+
           {matchingStatus === MatchingStatus.working &&
             successTrajNames.map((successTrajName) => (
               <div key={successTrajName} className="card bg-base-100 shadow-md dark:bg-slate-700">
@@ -165,7 +203,7 @@ function Home() {
                   <div className="card-actions justify-between">
                     <h3 className="dark:text-white text-lg font-semibold">{successTrajName}</h3>
                     <Link
-                      to={`/map/${task}/${successTrajName}`}
+                      to={`/deck/${task}/${successTrajName}`}
                       target="_blank"
                       style={{ textDecoration: 'none' }}
                     >

@@ -8,7 +8,7 @@ export interface TCoordinateDetail extends CoordinateDetail {
 }
 
 export interface SubTrajectoryDetail {
-  id: string;
+  id: number;
   begin_index: number;
   end_index: number;
   trajectory: CoordinateDetail[];

@@ -155,7 +155,7 @@ function MyComponent(props: {
             lng: point.longitude,
           } as LatLngExpression;
         });
-        L.polyline(latlngs, getPathOptions(method.name)).bindPopup(subTraj.id).addTo(matchingGroup);
+        L.polyline(latlngs, getPathOptions(method.name)).addTo(matchingGroup);
       });
       layersControlRef.current.addOverlay(matchingGroup, method.name);
       matchingGroups.push(matchingGroup);
