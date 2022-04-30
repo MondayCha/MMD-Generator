@@ -9,14 +9,14 @@ const AlertContainer = () => {
         <div
           className={`${
             t.visible ? 'animate-enter' : 'animate-leave'
-          } p-2 bg-indigo-800 items-center text-indigo-100 leading-none rounded-xl flex lg:inline-flex`}
+          } flex items-center rounded-xl bg-indigo-800 p-2 leading-none text-indigo-100 lg:inline-flex`}
           role="alert"
         >
-          <span className="font-semibold mr-1 ml-1 text-left flex-auto">
+          <span className="mr-1 ml-1 flex-auto text-left font-semibold">
             {resolveValue(t.message, t)}
           </span>
           <span
-            className="flex rounded-full bg-indigo-500 text-xs font-bold p-1 ml-1 bg-opacity-25 hover:bg-opacity-50 cursor-pointer"
+            className="ml-1 flex cursor-pointer rounded-full bg-indigo-500 bg-opacity-25 p-1 text-xs font-bold hover:bg-opacity-50"
             onClick={() => toast.dismiss(t.id)}
           >
             <X size={12} strokeWidth={3} />

@@ -1,0 +1,16 @@
+{
+  "name": "analysis",
+  "collaborators": [
+    "MondayCha <dlelylkin@outlook.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "analysis_bg.wasm",
+    "analysis.js",
+    "analysis_bg.js",
+    "analysis.d.ts"
+  ],
+  "module": "analysis.js",
+  "types": "analysis.d.ts",
+  "sideEffects": false
+}

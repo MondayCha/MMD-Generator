@@ -1,5 +1,7 @@
-/**
- * Map-Matching result visualization
+/*
+ * @Author: MondayCha
+ * @Date: 2022-04-30 22:01:14
+ * @Description: Map-Matching result annotation
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';

@@ -1,3 +1,8 @@
+/*
+ * @Author: MondayCha
+ * @Date: 2022-04-08 13:36:23
+ * @Description:
+ */
 import React from 'react';
 import { RouteObject } from 'react-router-dom';
 // import loadable from '@loadable/component';
@@ -8,13 +13,9 @@ import { RouteObject } from 'react-router-dom';
  * Lazy loading components.
  * @example(non server-side render): const Component = React.lazy(() => import('./Component'));
  */
-// const loadableFallback = { fallback: <Loading /> };
-// const Home = loadable(() => import('@pages/Home'), loadableFallback);
-// const Map = loadable(() => import('@pages/Map'), loadableFallback);
-
 const Home = React.lazy(() => import('@pages/Home'));
-const Map = React.lazy(() => import('@pages/Map'));
 const Deck = React.lazy(() => import('@pages/Deck'));
+const Annotation = React.lazy(() => import('@pages/Annotation'));
 
 export const routerConfig: RouteObject[] = [
   {
@@ -26,12 +27,12 @@ export const routerConfig: RouteObject[] = [
     element: <Home />,
   },
   {
-    path: '/map/:taskId/:trajName',
-    element: <Map />,
-  },
-  {
     path: '/deck/:taskId/:trajName',
     element: <Deck />,
+  },
+  {
+    path: '/annotation/:taskId/:trajName',
+    element: <Annotation />,
   },
 ];
 

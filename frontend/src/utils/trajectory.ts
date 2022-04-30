@@ -1,23 +1,33 @@
-import type { MatchingMethodDetail, SubTrajectoryDetail, CoordinateDetail } from '@services/type';
+import type { MatchingMethodDetail } from '@services/type';
 import type { Position2D } from 'deck.gl';
+import type { RGBColor } from '@deck.gl/core/utils/color';
 
 /**
  * @param {Array} bounds - [[lon, lat], [lon, lat]]
  */
-type Bounds = [[number, number], [number, number]];
+export type Bounds = [[number, number], [number, number]];
 
-function getMethodColor(name: string) {
+interface BoundInfo {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+}
+
+export interface BoundPolygon {
+  vertexs: Position2D[];
+  boundInfo: BoundInfo;
+}
+
+function getMethodColor(name: string): RGBColor {
   switch (name) {
     case 'GHMapMatching':
-      return '#ffe800';
+      return [255, 232, 0];
     case 'SimpleMapMatching':
-      return '#ed1c24';
+      return [237, 28, 36];
     case 'STMatching':
-      return '#4db848 ';
-    case 'RawTraj':
-      return '#a855f7';
+      return [77, 184, 72];
     default:
-      return '#22c55e';
+      return [0, 0, 0];
   }
 }
 
@@ -25,7 +35,7 @@ export class UnmatchedMethod {
   id: number;
   name: string;
   bounds: Bounds;
-  color: string;
+  color: RGBColor;
   trajectory: Position2D[];
   constructor(id: number, name: string, trajectory: Position2D[]) {
     this.id = id;
@@ -49,6 +59,7 @@ export class UnmatchedArea {
   id: number;
   bounds: Bounds;
   unmatchedMethods: UnmatchedMethod[];
+  boundInfo: BoundInfo;
   constructor(id: number) {
     this.id = id;
     this.bounds = [
@@ -56,6 +67,11 @@ export class UnmatchedArea {
       [-180, -90],
     ];
     this.unmatchedMethods = [];
+    this.boundInfo = {
+      latitude: 0,
+      longitude: 0,
+      zoom: 0,
+    };
   }
 
   addMethod(method: UnmatchedMethod) {
@@ -65,6 +81,55 @@ export class UnmatchedArea {
     this.bounds[1][0] = Math.max(this.bounds[1][0], method.bounds[1][0]);
     this.bounds[1][1] = Math.max(this.bounds[1][1], method.bounds[1][1]);
   }
+
+  getAreaBackground(): BoundPolygon[] {
+    return [
+      {
+        vertexs: [
+          [this.bounds[0][0], this.bounds[0][1]],
+          [this.bounds[1][0], this.bounds[0][1]],
+          [this.bounds[1][0], this.bounds[1][1]],
+          [this.bounds[0][0], this.bounds[1][1]],
+        ],
+        boundInfo: this.boundInfo,
+      },
+    ];
+  }
+
+  setBoundsInfo(longitude: number, latitude: number, zoom: number) {
+    this.boundInfo = {
+      longitude: longitude,
+      latitude: latitude,
+      zoom: zoom,
+    };
+  }
+
+  // getGeoJsonCircle() {
+  //   const center = [
+  //     (this.bounds[0][0] + this.bounds[1][0]) / 2,
+  //     (this.bounds[0][1] + this.bounds[1][1]) / 2,
+  //   ];
+  //   const radius = Math.sqrt(
+  //     Math.pow(Math.abs(this.bounds[0][0] - this.bounds[1][0]), 2) +
+  //       Math.pow(Math.abs(this.bounds[0][1] - this.bounds[1][1]), 2)
+  //   );
+  //   return {
+  //     name: `UnmatchedAreaBound-${this.id}`,
+  //     type: 'FeatureCollection',
+  //     features: [
+  //       {
+  //         type: 'Feature',
+  //         geometry: {
+  //           type: 'Point',
+  //           coordinates: center,
+  //         },
+  //         properties: {
+  //           radius,
+  //         },
+  //       },
+  //     ],
+  //   };
+  // }
 }
 
 // Create a Map of id for MatchingMethodDetail

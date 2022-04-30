@@ -164,7 +164,7 @@ def map_matching():
             # Write Coordinates
             with open(os.path.join(output_path, 'Lcss-%s' % trajectory.name), 'w') as f:
                 for i in range(len(min_base_common_indexs)):
-                    f.write('%s' % (base_lcss_input[min_base_common_indexs[i]]))
+                    f.write('%s\n' % (base_lcss_input[min_base_common_indexs[i]]))
                 f.close()
 
             def is_continuous(last_base_index, base_index):
