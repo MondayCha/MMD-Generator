@@ -1,11 +1,7 @@
 import type { MatchingMethodDetail } from '@services/type';
 import type { Position2D } from 'deck.gl';
 import type { RGBColor } from '@deck.gl/core/utils/color';
-
-/**
- * @param {Array} bounds - [[lon, lat], [lon, lat]]
- */
-export type Bounds = [[number, number], [number, number]];
+import type { Bounds } from '@services/type';
 
 interface BoundInfo {
   latitude: number;

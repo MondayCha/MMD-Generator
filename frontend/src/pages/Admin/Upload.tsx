@@ -1,3 +1,8 @@
+/*
+ * @Author: MondayCha
+ * @Date: 2022-04-30 22:19:12
+ * @Description: Upload GPS data to server
+ */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -22,7 +27,7 @@ enum MatchingStatus {
   working,
 }
 
-function Home() {
+const Upload = () => {
   // hooks (theme, i18n)
   const { t } = useTranslation();
   const { taskId } = useParams();
@@ -31,11 +36,24 @@ function Home() {
   const { toggleTheme } = useThemeContext();
   // home page state
   const [matchingStatus, setMatchingStatus] = useState<MatchingStatus>(MatchingStatus.idling);
-  const [task, setTask] = useState<number>(0);
+  const [task, setTask] = useState<string>('');
   const [successTrajNames, setSuccessTrajNames] = useState<string[]>([]);
   const [failedTrajNames, setFailedTrajNames] = useState<string[]>([]);
   const [progress, setProgress] = useState<number>(0);
   const [hasSaved, setHasSaved] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (taskId && successTrajNames.length == 0 && failedTrajNames.length == 0) {
+      api.task.getTaskInfo(taskId).then(({ detail }) => {
+        let { task_id, matching_result } = detail as TaskDetail;
+        setSuccessTrajNames(matching_result.success);
+        setFailedTrajNames(matching_result.failed);
+        setMatchingStatus(MatchingStatus.working);
+        setTask(task_id);
+        greet();
+      });
+    }
+  }, [taskId]);
 
   /**
    * Pop alert if files has not been saved before closing the window
@@ -68,14 +86,10 @@ function Home() {
       let percentProgress = (progress.loaded / progress.total) * 100;
       if (percentProgress === 100) {
         setMatchingStatus(MatchingStatus.waiting);
-        setProgress(0);
-      } else {
-        setProgress(percentProgress);
       }
     },
-    onDownloadProgress: (progress) => {
+    onDownloadProgress: () => {
       setMatchingStatus(MatchingStatus.downloading);
-      setProgress((progress.loaded / progress.total) * 100);
     },
   };
 
@@ -88,21 +102,22 @@ function Home() {
     onDrop: (acceptedFiles, fileRejections) => {
       setMatchingStatus(MatchingStatus.uploading);
       if (fileRejections.length > 0) {
-        toast('Only text will be accepted', { id: 'dropZone' });
+        toast('Only text/* will be accepted', { id: 'dropZone' });
       }
       if (acceptedFiles.length > 0) {
         let formData = new FormData();
         acceptedFiles.map((acceptedFile) => formData.append('files', acceptedFile));
         api.matching
-          .mapMatching(formData, matchingConfig)
+          .matchTraj(formData, matchingConfig)
           .then(({ detail }) => {
-            let { task_id, matching_result } = detail as MatchingDetail;
+            let { task_id, matching_result } = detail as TaskDetail;
             toast(`Matching task ${task_id} is submitted`, { id: 'dropZone' });
-            setSuccessTrajNames(matching_result.success.map((result) => result.name));
-            setFailedTrajNames(matching_result.failed.map((result) => result.name));
+            setTask(task_id);
+            setSuccessTrajNames(matching_result.success);
+            setFailedTrajNames(matching_result.failed);
             setMatchingStatus(MatchingStatus.working);
             setHasSaved(false);
-            navigate(`/home/${task_id}`);
+            navigate(`/admin/upload/${task_id}`);
           })
           .catch(() => {
             setMatchingStatus(MatchingStatus.idling);
@@ -164,7 +179,7 @@ function Home() {
                       cy="12"
                       r="10"
                       stroke="currentColor"
-                      stroke-width="4"
+                      strokeWidth="4"
                     ></circle>
                     <path
                       className="opacity-75"
@@ -191,7 +206,7 @@ function Home() {
                   <div className="card-actions justify-between">
                     <h3 className="text-lg font-semibold dark:text-white">{successTrajName}</h3>
                     <Link
-                      to={`/deck/${task}/${successTrajName}`}
+                      to={`/annotations/${task}/${successTrajName}`}
                       target="_blank"
                       style={{ textDecoration: 'none' }}
                     >
@@ -221,6 +236,6 @@ function Home() {
       </div>
     </div>
   );
-}
+};
 
-export default Home;
+export default Upload;

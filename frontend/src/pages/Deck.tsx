@@ -17,7 +17,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Refresh } from 'tabler-icons-react';
 // Types
 import type { TrajectoryDetail, CoordinateDetail } from '@services/type';
-import type { UnmatchedArea, UnmatchedMethod, BoundPolygon, Bounds } from '@utils/trajectory';
+import type { UnmatchedArea, UnmatchedMethod, BoundPolygon } from '@utils/trajectory';
 import type { ViewStateProps } from '@deck.gl/core/lib/deck';
 import type { Position2D } from 'deck.gl';
 

@@ -1,7 +1,8 @@
-/**
- * @description: Router and Alert Container View
+/*
+ * @Author: MondayCha
+ * @Date: 2022-04-08 13:36:23
+ * @Description: Router and Alert Container View
  */
-import React from 'react';
 import { BrowserRouter, useRoutes } from 'react-router-dom';
 import routerConfig from './router.config';
 import { ThemeProvider } from '@components/theme';

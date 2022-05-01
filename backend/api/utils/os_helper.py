@@ -36,6 +36,7 @@ def get_output_path(task_id):
 def get_trajectory_path(task_id):
     return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'trajectory')
 
+
 def get_matching_path(task_id):
     return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'matching')
 

@@ -1,3 +1,8 @@
+/*
+ * @Author: MondayCha
+ * @Date: 2022-04-08 13:36:24
+ * @Description:
+ */
 export interface CoordinateDetail {
   longitude: number;
   latitude: number;
@@ -32,8 +37,26 @@ export interface TrajectoryDetail {
   common_trajs: SubTrajectoryDetail[];
 }
 
+export interface MethodResultDetail {
+  method_name: string;
+  trajectory: CoordinateDetail[];
+}
+
+/**
+ * @param {Array} bounds - [[lon, lat], [lon, lat]]
+ */
+export type Bounds = [[number, number], [number, number]];
+
+export interface MatchingResultDetail {
+  task_id: string;
+  traj_name: string;
+  bounds: Bounds;
+  raw_traj: TCoordinateDetail[];
+  matching_result: MethodResultDetail[];
+}
+
 export interface MatchingDetail {
-  task_id: number;
+  task_id: string;
   matching_result: {
     success: TrajectoryDetail[];
     failed: TrajectoryDetail[];
@@ -41,7 +64,9 @@ export interface MatchingDetail {
 }
 
 export interface TaskDetail {
-  id: number;
-  success: string[];
-  failed: string[];
+  task_id: string;
+  matching_result: {
+    success: string[];
+    failed: string[];
+  };
 }

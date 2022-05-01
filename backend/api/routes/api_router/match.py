@@ -14,6 +14,19 @@ from flasgger import swag_from
 
 from . import bp
 
+def get_bounds(coordinates):
+    min_lat = min_lon = max_lat = max_lon = None
+    for coordinate in coordinates:
+        if min_lat is None or coordinate.latitude < min_lat:
+            min_lat = coordinate.latitude
+        if min_lon is None or coordinate.longitude < min_lon:
+            min_lon = coordinate.longitude
+        if max_lat is None or coordinate.latitude > max_lat:
+            max_lat = coordinate.latitude
+        if max_lon is None or coordinate.longitude > max_lon:
+            max_lon = coordinate.longitude
+    return [[float(min_lon), float(min_lat)], [float(max_lon), float(max_lat)]]
+
 
 @bp.route('/match', methods=['POST'])
 @swag_from({
@@ -37,6 +50,7 @@ def multiple_matching():
         db.session.add(new_task)
         db.session.commit()
         g.task = new_task
+        task_hashid = current_app.hashids.encode(new_task.id)
         create_task_folder(new_task.id)
         input_path = get_input_path(new_task.id)
         output_path = get_output_path(new_task.id)
@@ -120,13 +134,14 @@ def multiple_matching():
             for i in range(0, len(lcss_method_names)):
                 multiple_matching_list.append({
                     'method_name': lcss_method_names[i],
-                    'trajectory': [result.to_dict() for result in lcss_input]
+                    'trajectory': [result.to_dict() for result in lcss_inputs[i]]
                 })
 
             multiple_matching_dict = {
-                'task_id': new_task.id,
-                'trajectory_name': trajectory.name,
-                'raw_trajectory': [result.to_dict() for result in trajectory.raw_traj],
+                'task_id': task_hashid,
+                'traj_name': trajectory.name,
+                'bounds': get_bounds(trajectory.raw_traj),
+                'raw_traj': [result.to_dict() for result in trajectory.raw_traj],
                 'matching_result': multiple_matching_list
             }
 
@@ -137,7 +152,7 @@ def multiple_matching():
 
         # Write to disk
         request_detail = {
-            'task_id': new_task.id,
+            'task_id': task_hashid,
             'matching_result': {
                 'success': [ traj.name for traj in success_trajectory_list ],
                 'failed': [ traj.name for traj in failed_trajectory_list ]

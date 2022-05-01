@@ -10133,7 +10133,7 @@ walker@^1.0.7:
   dependencies:
     makeerror "1.0.12"
 
-"wasm-mm-analysis@file:./wasm/analysis/pkg":
+"wasm-mm-analyzer@file:./wasm/analysis/pkg":
   version "0.1.0"
 
 watchpack@^2.3.1:

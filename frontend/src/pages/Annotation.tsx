@@ -17,11 +17,14 @@ import { WebMercatorViewport } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 // Asserts
 import { Refresh } from 'tabler-icons-react';
+import { debounce } from 'lodash';
+import { pre_annotate } from '@wasm/analysis/pkg';
 // Types
-import type { TrajectoryDetail, CoordinateDetail } from '@services/type';
-import type { UnmatchedArea, UnmatchedMethod, BoundPolygon, Bounds } from '@utils/trajectory';
+import type { TrajectoryDetail, CoordinateDetail, MatchingResultDetail } from '@services/type';
+import type { UnmatchedArea, UnmatchedMethod, BoundPolygon } from '@utils/trajectory';
 import type { ViewStateProps } from '@deck.gl/core/lib/deck';
 import type { Position2D } from 'deck.gl';
+import toast from 'react-hot-toast';
 
 interface PathData {
   name: string | number;
@@ -58,55 +61,64 @@ export default function Deck() {
   const [unmatchedAreas, setUnmatchedAreas] = useState<UnmatchedArea[]>([]);
   const [commonPaths, setCommonPaths] = useState<PathData[]>([]);
   const [rawTraj, setRawTraj] = useState<PathData[]>([]);
-  const [showRawTraj, setShowRawTraj] = useState<boolean>(false);
+  const [showRawTraj, setShowRawTraj] = useState<boolean>(true);
   const [isAnnotating, setIsAnnotating] = useState<boolean>(false);
   const [annotationIndex, setAnnotationIndex] = useState<number>(-1);
   const [checkAreas, setCheckAreas] = useState<UnmatchedArea[]>([]);
   const [checkTraj, setCheckTraj] = useState<UnmatchedMethod[]>([]);
 
+  const debounceFetch = useMemo(
+    () =>
+      debounce(() => {
+        api.trajectory.getMatchingResult(taskId, trajName).then(({ detail }) => {
+          const { bounds, raw_traj, matching_result } = detail as MatchingResultDetail;
+          const preAnnotation = pre_annotate(matching_result);
+          log.info('[Pre Annotation]', preAnnotation);
+          // const areas = getUnmatchedAreas(matching_methods);
+          // setUnmatchedAreas(areas);
+          setCommonPaths(
+            preAnnotation.matched_areas.map((p) => ({
+              name: p.id,
+              path: traj2path(p.sub_traj.traj),
+            }))
+          );
+          setRawTraj([
+            {
+              name: 'raw',
+              path: traj2path(raw_traj),
+            },
+          ]);
+          // fit bounds for raw_traj and each area
+          let view = new WebMercatorViewport({
+            width: window.innerWidth,
+            height: window.innerHeight,
+          });
+          log.info('[Fit Bounds] start', bounds);
+          let { longitude, latitude, zoom } = view.fitBounds(bounds, {
+            padding: 100,
+          });
+          log.info('[Fit Bounds] end', bounds, { longitude, latitude, zoom });
+          let newViewState = {
+            ...INITIAL_VIEW_STATE,
+            longitude: longitude,
+            latitude: latitude,
+            zoom: zoom,
+            pitch: 0,
+          };
+          setViewState(newViewState);
+          setInitViewState(newViewState);
+          //   areas.forEach((area) => {
+          //     let { longitude, latitude, zoom } = view.fitBounds(area.bounds, { padding: 100 });
+          //     area.setBoundsInfo(longitude, latitude, zoom);
+          //   });
+        });
+      }, 1800),
+    [taskId, trajName]
+  );
+
   useEffect(() => {
-    api.trajectory.getTrajectory(taskId, trajName).then(({ detail }) => {
-      const { matching_methods, common_trajs, bounds, raw_traj } = detail as TrajectoryDetail;
-      const areas = getUnmatchedAreas(matching_methods);
-      setUnmatchedAreas(areas);
-      setCommonPaths(
-        common_trajs.map((subTraj) => ({
-          name: subTraj.id,
-          path: traj2path(subTraj.trajectory),
-        }))
-      );
-      setRawTraj([
-        {
-          name: 'raw',
-          path: traj2path(raw_traj),
-        },
-      ]);
-      // fit bounds for raw_traj and each area
-      let view = new WebMercatorViewport({ width: window.innerWidth, height: window.innerHeight });
-      let { longitude, latitude, zoom } = view.fitBounds(
-        [
-          [bounds.left_top.longitude, bounds.left_top.latitude],
-          [bounds.right_bottom.longitude, bounds.right_bottom.latitude],
-        ],
-        {
-          padding: 100,
-        }
-      );
-      let newViewState = {
-        ...INITIAL_VIEW_STATE,
-        longitude: longitude,
-        latitude: latitude,
-        zoom: zoom,
-        pitch: 0,
-      };
-      setViewState(newViewState);
-      setInitViewState(newViewState);
-      areas.forEach((area) => {
-        let { longitude, latitude, zoom } = view.fitBounds(area.bounds, { padding: 100 });
-        area.setBoundsInfo(longitude, latitude, zoom);
-      });
-    });
-  }, [taskId, trajName]);
+    debounceFetch();
+  }, [debounceFetch]);
 
   const layers = useMemo(() => {
     return [
@@ -216,7 +228,7 @@ export default function Deck() {
       }),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showRawTraj, isAnnotating, unmatchedAreas, checkAreas, checkTraj]);
+  }, [showRawTraj, isAnnotating, unmatchedAreas, checkAreas, checkTraj, rawTraj]);
 
   const handleArea = useCallback(
     (type: string) => {
@@ -269,7 +281,13 @@ export default function Deck() {
         <button className="btn btn-square btn-sm" onClick={() => setViewState(initViewState)}>
           <Refresh size={20} />
         </button>
-        <button className="btn btn-sm" onClick={() => setShowRawTraj((prev) => !prev)}>
+        <button
+          className="btn btn-sm"
+          onClick={() => {
+            setShowRawTraj((prev) => !prev);
+            log.info('[Set Show RawTraj]', rawTraj);
+          }}
+        >
           {showRawTraj ? 'Show LCSS Result' : 'Show Raw Traj'}
         </button>
         {!isAnnotating && (

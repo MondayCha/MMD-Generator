@@ -11,7 +11,8 @@
       "@middleware/*": ["./middleware/*"],
       "@pages/*": ["./pages/*"],
       "@services/*": ["./services/*"],
-      "@utils/*": ["./utils/*"]
+      "@utils/*": ["./utils/*"],
+      "@wasm/*": ["./wasm/*"]
     }
   }
 }

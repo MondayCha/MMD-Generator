@@ -1,3 +1,8 @@
+'''
+Author: MondayCha
+Date: 2022-04-06 17:12:13
+Description: 
+'''
 class Coordinate:
     def __init__(self, longitude: str, latitude: str):
         self.longitude: str = longitude
@@ -24,8 +29,8 @@ class Coordinate:
 
     def to_dict(self):
         return {
-            'longitude': self.longitude,
-            'latitude': self.latitude
+            'longitude': float(self.longitude),
+            'latitude': float(self.latitude)
         }
 
 class TimestampCoordinate(Coordinate):
@@ -54,7 +59,7 @@ class TimestampCoordinate(Coordinate):
 
     def to_dict(self):
         return {
-            'longitude': self.longitude,
-            'latitude': self.latitude,
+            'longitude': float(self.longitude),
+            'latitude': float(self.latitude),
             'timestamp': self.timestamp
         }
