@@ -1,0 +1,16 @@
+{
+  "name": "pre-annotation",
+  "collaborators": [
+    "MondayCha <dlelylkin@outlook.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "pre_annotation_bg.wasm",
+    "pre_annotation.js",
+    "pre_annotation_bg.js",
+    "pre_annotation.d.ts"
+  ],
+  "module": "pre_annotation.js",
+  "types": "pre_annotation.d.ts",
+  "sideEffects": false
+}

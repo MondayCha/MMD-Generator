@@ -1,5 +1,5 @@
 [package]
-name = "analysis"
+name = "pre-annotation"
 version = "0.1.0"
 authors = ["MondayCha <dlelylkin@outlook.com>"]
 edition = "2021"

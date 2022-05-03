@@ -14,7 +14,6 @@ import { RouteObject } from 'react-router-dom';
  * @example(non server-side render): const Component = React.lazy(() => import('./Component'));
  */
 const Home = lazy(() => import('@pages/Home'));
-const Deck = lazy(() => import('@pages/Deck'));
 const Annotation = lazy(() => import('@pages/Annotation'));
 const AdminUpload = lazy(() => import('@pages/Admin/Upload'));
 
@@ -22,10 +21,6 @@ export const routerConfig: RouteObject[] = [
   {
     path: '/',
     element: <Home />,
-  },
-  {
-    path: '/deck/:taskId/:trajName',
-    element: <Deck />,
   },
   {
     path: '/annotations/:taskId/:trajName',

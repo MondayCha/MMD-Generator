@@ -1,3 +1,8 @@
+/*
+ * @Author: MondayCha
+ * @Date: 2022-04-08 13:36:23
+ * @Description: Backend Api Config
+ */
 let hostUrl: string;
 switch (process.env.NODE_ENV) {
   case 'development':

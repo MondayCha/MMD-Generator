@@ -1,10 +1,7 @@
-//! Rust Wasm Analyzer
-//! @Author: MondayCha
-//! @Date: 2022-04-30 21:27:51
 mod annotator;
 mod utils;
 
-use annotator::{MethodResult, PreAnnotator};
+use annotator::{AnnotatorConfig, MethodResult, PreAnnotator};
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -25,13 +22,16 @@ pub fn greet() {
 }
 
 #[wasm_bindgen]
-pub fn pre_annotate(val: &JsValue) -> JsValue {
+pub fn pre_annotate(val: &JsValue, auto_merge_circle: bool) -> JsValue {
     utils::set_panic_hook();
     let method_results: Vec<MethodResult> = val.into_serde().unwrap();
     if method_results.len() < 2 {
         return JsValue::null();
     }
-    let mut annotator = PreAnnotator::new(&method_results[0]);
+    let annotator_config = AnnotatorConfig {
+        auto_merge_circle: auto_merge_circle,
+    };
+    let mut annotator = PreAnnotator::new(&method_results[0], annotator_config);
     for i in 1..method_results.len() {
         annotator.add_sub_annotator(&method_results[i]);
     }

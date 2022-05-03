@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { useThemeContext } from '@components/theme';
 import { Language, Moon, Settings } from 'tabler-icons-react';
 import toast from 'react-hot-toast';
-import { greet } from '@wasm/analysis/pkg';
 // Types
 import { MatchingDetail, TaskDetail } from '@services/type';
 import { AxiosRequestConfig } from 'axios';
