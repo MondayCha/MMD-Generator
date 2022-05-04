@@ -16,7 +16,7 @@ import { PathStyleExtension } from '@deck.gl/extensions';
 import { WebMercatorViewport } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 // Nebula.gl
-import { EditableGeoJsonLayer, DrawLineStringMode, DrawPolygonMode } from 'nebula.gl';
+import { EditableGeoJsonLayer, DrawRectangleMode, ModifyMode, DrawLineStringMode } from 'nebula.gl';
 // Asserts
 import {
   Refresh,
@@ -107,7 +107,8 @@ type AnnotationStateAction =
   | { type: 'toggleRawTraj' }
   | { type: 'startAnnotating' }
   | { type: 'endAnnotating' }
-  | { type: 'toggleDrawPolygonLayer' };
+  | { type: 'startDraw' }
+  | { type: 'endDraw' };
 
 function annotationStateReducer(
   state: AnnotationState,
@@ -120,11 +121,25 @@ function annotationStateReducer(
       return { showRawTraj: false, showDrawPolygonLayer: false, isAnnotating: true };
     case 'endAnnotating':
       return { ...state, isAnnotating: !state.isAnnotating };
-    case 'toggleDrawPolygonLayer':
-      return { ...state, showDrawPolygonLayer: !state.showDrawPolygonLayer };
+    case 'startDraw':
+      return { ...state, showRawTraj: true, showDrawPolygonLayer: true };
+    case 'endDraw':
+      return { ...state, showDrawPolygonLayer: false };
     default:
       throw new Error();
   }
+}
+
+// nebula.gl
+const initialFeaturesState = {
+  type: 'FeatureCollection',
+  features: [],
+};
+
+const enum EditState {
+  NONE,
+  DRAW_POLYGON,
+  MODIFY_POINT,
 }
 
 export default function Deck() {
@@ -141,18 +156,21 @@ export default function Deck() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   // Nebula.gl State
-  const [features, setFeatures] = useState({
-    type: 'FeatureCollection',
-    features: [],
-  });
-  const [selectedFeatureIndexes] = useState([]);
-  const [mode, setMode] = useState(() => DrawPolygonMode);
+  const [features, setFeatures] = useState<any>(initialFeaturesState);
+  const [selectedFeatureIndexes, setSelectedFeatureIndexes] = useState<number[]>([]);
+  const [mode, setMode] = useState<any>(() => DrawRectangleMode);
+  const [editState, setEditState] = useState(EditState.NONE);
 
   const editableLayer = new EditableGeoJsonLayer({
     // id: "geojson-layer",
     data: features,
     mode,
-    selectedFeatureIndexes,
+    selectedFeatureIndexes: selectedFeatureIndexes,
+    getFillColor: [0, 174, 239, 50],
+    getLineColor: [0, 174, 239, 200],
+    lineWidthMinPixels: 4,
+    getEditHandlePointColor: [0, 174, 239, 255],
+    getEditHandlePointRadius: 6,
 
     onEdit: ({ updatedData }) => {
       setFeatures(updatedData);
@@ -209,7 +227,7 @@ export default function Deck() {
     () =>
       debounce(() => {
         setIsLoading(false);
-        toast('预标注已完成，可以开始标注了', { id: 'close-loading' });
+        toast('预标注已完成，可以开始标注了', { id: 'pre-annotation' });
       }, 500),
     []
   );
@@ -485,18 +503,113 @@ export default function Deck() {
     toast('提交成功', { id: 'submit-toast' });
   };
 
+  const handleTrajModify = () => {
+    if (editState !== EditState.DRAW_POLYGON || features.features.length === 0) {
+      toast('请先绘制区域', { id: 'draw-toast' });
+      return;
+    } else if (features.features.length > 1) {
+      toast('检测到多个选区，将处理第一个选区', { id: 'draw-toast' });
+    }
+    setEditState(EditState.MODIFY_POINT);
+    const rectangleArea = features.features[0];
+    const boundInfo = {
+      //@ts-ignore
+      minLon: rectangleArea.geometry.coordinates[0][0][0] as number,
+      //@ts-ignore
+      minLat: rectangleArea.geometry.coordinates[0][0][1] as number,
+      //@ts-ignore
+      maxLon: rectangleArea.geometry.coordinates[0][2][0] as number,
+      //@ts-ignore
+      maxLat: rectangleArea.geometry.coordinates[0][2][1] as number,
+    };
+    if (boundInfo.minLon > boundInfo.maxLon) {
+      [boundInfo.minLon, boundInfo.maxLon] = [boundInfo.maxLon, boundInfo.minLon];
+    } else if (boundInfo.minLat > boundInfo.maxLat) {
+      [boundInfo.minLat, boundInfo.maxLat] = [boundInfo.maxLat, boundInfo.minLat];
+    }
+    log.info('[Bound Info]', boundInfo);
+    if (rawTraj.length > 0) {
+      const filteredTraj = rawTraj[0].path
+        .map((p, index) => ({
+          index: index,
+          timestamp: p.timestamp,
+          coordinates: p.coordinates,
+        }))
+        .filter((p) => {
+          return (
+            boundInfo.minLon <= p.coordinates[0] &&
+            p.coordinates[0] <= boundInfo.maxLon &&
+            boundInfo.minLat <= p.coordinates[1] &&
+            p.coordinates[1] <= boundInfo.maxLat
+          );
+        });
+      log.info('[Filtered Traj]', filteredTraj);
+      setFeatures({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: { index: filteredTraj.map((p) => p.index) },
+            geometry: {
+              type: 'LineString',
+              coordinates: filteredTraj.map((p) => p.coordinates),
+            },
+          },
+        ],
+      });
+      setMode(() => ModifyMode);
+      setSelectedFeatureIndexes([0]);
+    }
+  };
+
+  const handleGenerateNewRawTraj = () => {
+    if (
+      editState !== EditState.MODIFY_POINT ||
+      features.features.length === 0 ||
+      rawTraj.length === 0
+    ) {
+      toast('请先修正轨迹', { id: 'draw-toast' });
+      return;
+    }
+    const modifiedLine = features.features[0];
+    const indexes: number[] = modifiedLine.properties.index;
+    const coordinates: Position2D[] = modifiedLine.geometry.coordinates;
+    if (indexes.length != coordinates.length) {
+      toast('[Bug] 修正轨迹时请不要添加或删除点，请重新选择区域', { id: 'draw-toast' });
+      setSelectedFeatureIndexes([]);
+      setFeatures(initialFeaturesState);
+      setEditState(EditState.DRAW_POLYGON);
+      setMode(() => DrawRectangleMode);
+      return;
+    }
+    log.info('[Modified Line]', modifiedLine);
+    let modifiedRawTraj: TPathData = rawTraj[0];
+    modifiedRawTraj.path.forEach((way, index) => {
+      const order = indexes.findIndex((v) => v === index);
+      if (order > -1) {
+        way.coordinates = coordinates[order];
+      }
+    });
+    setRawTraj([modifiedRawTraj]);
+    annotationDispatch({ type: 'endDraw' });
+    setSelectedFeatureIndexes([]);
+    setFeatures(initialFeaturesState);
+    setEditState(EditState.NONE);
+    toast('轨迹已修正，正在重新预标注', { id: 'pre-annotation' });
+  };
+
   return (
     <div className="absolute h-full w-full bg-slate-100 dark:bg-[#1e2433]">
       <div className="absolute left-12 right-0 flex h-8 flex-row items-center justify-start">
         <p className="select-none text-center font-semibold text-slate-400">
           地图匹配数据集标注工具
         </p>
-        {/* <button
+        <button
           className="btn btn-ghost  btn-sm"
           onClick={() => log.info('[Editable]', features, selectedFeatureIndexes)}
         >
           Print
-        </button> */}
+        </button>
       </div>
       <div
         className="absolute top-8 left-12 bottom-8 right-52 overflow-hidden rounded-2xl shadow-inner lg:bottom-6"
@@ -532,7 +645,13 @@ export default function Deck() {
           <div className="mx-2 flex flex-col border-b-2 border-slate-600 border-opacity-50  py-5">
             <button
               className="btn-toolbar"
-              onClick={() => annotationDispatch({ type: 'toggleRawTraj' })}
+              onClick={() => {
+                if (editState === EditState.NONE) {
+                  annotationDispatch({ type: 'toggleRawTraj' });
+                } else {
+                  toast('正在编辑原始轨迹数据，无法切换', { id: 'left-panel' });
+                }
+              }}
             >
               {showRawTraj ? <Map2 size={28} /> : <MapSearch size={28} />}
               <p className="text-xs">
@@ -557,8 +676,18 @@ export default function Deck() {
             {showRawTraj && (
               <>
                 <button
-                  className="btn-toolbar"
-                  onClick={() => annotationDispatch({ type: 'toggleDrawPolygonLayer' })}
+                  className={`btn-toolbar ${
+                    editState === EditState.DRAW_POLYGON ? 'text-info' : ''
+                  }`}
+                  onClick={() => {
+                    if (editState === EditState.MODIFY_POINT) {
+                      toast('轨迹修正未完成，请先清除改动或生成轨迹', { id: 'draw-toast' });
+                    } else {
+                      annotationDispatch({ type: 'startDraw' });
+                      setEditState(EditState.DRAW_POLYGON);
+                      setMode(() => DrawRectangleMode);
+                    }
+                  }}
                 >
                   <Vector size={28} />
                   <p className="text-xs">
@@ -568,8 +697,10 @@ export default function Deck() {
                   </p>
                 </button>
                 <button
-                  className="btn-toolbar"
-                  onClick={() => annotationDispatch({ type: 'toggleDrawPolygonLayer' })}
+                  className={`btn-toolbar ${
+                    editState === EditState.MODIFY_POINT ? 'text-info' : ''
+                  }`}
+                  onClick={handleTrajModify}
                 >
                   <HandMove size={28} />
                   <p className="text-xs">
@@ -580,7 +711,12 @@ export default function Deck() {
                 </button>
                 <button
                   className="btn-toolbar"
-                  onClick={() => annotationDispatch({ type: 'toggleDrawPolygonLayer' })}
+                  onClick={() => {
+                    annotationDispatch({ type: 'endDraw' });
+                    setFeatures(initialFeaturesState);
+                    setEditState(EditState.NONE);
+                    setSelectedFeatureIndexes([]);
+                  }}
                 >
                   <Eraser size={28} />
                   <p className="text-xs">
@@ -589,10 +725,7 @@ export default function Deck() {
                     改动
                   </p>
                 </button>
-                <button
-                  className="btn-toolbar"
-                  onClick={() => annotationDispatch({ type: 'toggleDrawPolygonLayer' })}
-                >
+                <button className="btn-toolbar" onClick={handleGenerateNewRawTraj}>
                   <Route size={28} />
                   <p className="text-xs">
                     生成
