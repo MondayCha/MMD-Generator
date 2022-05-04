@@ -22,14 +22,14 @@ export interface SubTrajOwner {
 }
 
 export interface MergedSubTrajArray {
+    traj: Coordinate[];
     owners: SubTrajOwner[];
     base_owner_type: AnnotatorType;
-    traj: Coordinate[];
 }
 
 export interface SubTrajArray {
-    owner: SubTrajOwner;
     traj: Coordinate[];
+    owner: SubTrajOwner;
     has_circle: boolean;
 }
 
@@ -39,12 +39,12 @@ export interface MatchedArea {
 }
 
 export interface PreMatchedArea {
-    last_common_id: number;
-    sub_traj: SubTrajArray;
+    id: number;
+    sub_traj: MergedSubTrajArray;
 }
 
 export interface MisMatchedArea {
-    last_common_id: number;
+    id: number;
     sub_trajs: MergedSubTrajArray[];
 }
 

@@ -6,6 +6,10 @@
   .image-info-card {
     @apply mx-auto flex max-w-xs items-center space-x-1.5 rounded-xl bg-white p-1.5 shadow-sm;
   }
+
+  .btn-toolbar {
+    @apply w-8 flex-col items-center justify-between space-y-1 overflow-visible text-slate-400 transition-colors hover:text-info focus:outline-none active:brightness-95;
+  }
 }
 
 body {

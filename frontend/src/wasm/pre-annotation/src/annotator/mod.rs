@@ -95,13 +95,13 @@ pub struct MatchedArea {
 
 #[derive(Serialize, Deserialize)]
 pub struct PreMatchedArea {
-    last_common_id: usize,
+    id: usize,
     sub_traj: MergedSubTrajArray,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct MisMatchedArea {
-    last_common_id: usize,
+    id: usize,
     sub_trajs: Vec<MergedSubTrajArray>,
 }
 
@@ -172,7 +172,7 @@ impl PreAnnotator {
 
     fn generate_mismatched_area_from_sub_trajs(
         &self,
-        last_common_id: usize,
+        id: usize,
         matching_methods: &Vec<SubTrajArray>,
     ) -> EitherMatchedArea {
         let sub_annotators: Vec<AnnotatorType> = matching_methods
@@ -254,12 +254,12 @@ impl PreAnnotator {
 
         if merged_sub_trajs.len() > 1 {
             EitherMatchedArea::MisMatched(MisMatchedArea {
-                last_common_id: last_common_id,
+                id: id,
                 sub_trajs: merged_sub_trajs,
             })
         } else if merged_sub_trajs.len() == 1 {
             EitherMatchedArea::PreMatched(PreMatchedArea {
-                last_common_id: last_common_id,
+                id: id,
                 sub_traj: merged_sub_trajs.pop().unwrap(),
             })
         } else {
@@ -351,7 +351,7 @@ impl PreAnnotator {
                         has_circle: false,
                     },
                 });
-                matched_area_id += 1;
+                matched_area_id += 2;
             }
             area_start = current_index;
         }
@@ -400,7 +400,7 @@ impl PreAnnotator {
                 // unmerged_mismatched_all_trajs.push(unmerged_mismatched_trajs);
             }
             area_start = baseline_end;
-            mismatched_area_id = matched_area.id;
+            mismatched_area_id = matched_area.id + (1 as usize);
         }
 
         let mut unmerged_mismatched_trajs: Vec<SubTrajArray> = vec![];

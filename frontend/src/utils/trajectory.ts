@@ -6,7 +6,6 @@ import type {
   MisMatchedArea as WasmMisMatchedArea,
   SubTrajOwner,
 } from '@wasm/pre-annotation/package';
-import { assert } from 'console';
 
 interface BoundInfo {
   latitude: number;
@@ -142,11 +141,11 @@ export class MismatchedArea {
 export function getMismatchedAreas(wasmMismatchedAreas: WasmMisMatchedArea[]): MismatchedArea[] {
   let mismatchedAreas: MismatchedArea[] = [];
   wasmMismatchedAreas.forEach((area) => {
-    const unmatchedArea = new MismatchedArea(area.last_common_id);
+    const unmatchedArea = new MismatchedArea(area.id);
     area.sub_trajs.forEach((subTraj) => {
       unmatchedArea.addOption(
         new OptionalTraj(
-          area.last_common_id,
+          area.id,
           subTraj.base_owner_type.toString(),
           subTraj.owners,
           subTraj.traj.map((p) => [p.longitude, p.latitude])
