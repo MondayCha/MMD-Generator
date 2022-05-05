@@ -10,13 +10,13 @@ import { api } from '@services/api';
 import log from '@middleware/logger';
 import { AreaState, getMismatchedAreas } from '@utils/trajectory';
 // Deck.gl
-import { StaticMap, MapContext, NavigationControl } from 'react-map-gl';
+import { StaticMap, MapContext } from 'react-map-gl';
 import DeckGL, { PathLayer, PolygonLayer, FlyToInterpolator, TripsLayer } from 'deck.gl';
 import { PathStyleExtension } from '@deck.gl/extensions';
 import { WebMercatorViewport } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 // Nebula.gl
-import { EditableGeoJsonLayer, DrawRectangleMode, ModifyMode, DrawLineStringMode } from 'nebula.gl';
+import { EditableGeoJsonLayer, DrawRectangleMode, ModifyMode } from 'nebula.gl';
 // Asserts
 import {
   Refresh,
@@ -27,8 +27,6 @@ import {
   HandMove,
   ArrowsMaximize,
   Eraser,
-  ChartArrowsVertical,
-  Square0,
   Square1,
   Square3,
   Square2,
@@ -37,19 +35,17 @@ import {
 import { debounce } from 'lodash';
 import { PreprocessAreas, pre_annotate } from '@wasm/pre-annotation/package';
 // Types
-import type {
-  TrajectoryDetail,
-  CoordinateDetail,
-  MatchingResultDetail,
-  TCoordinateDetail,
-} from '@services/type';
-import type { MismatchedArea, OptionalTraj, BoundPolygon } from '@utils/trajectory';
+import type { CoordinateDetail, MatchingResultDetail } from '@services/type';
+import type { MismatchedArea, BoundPolygon } from '@utils/trajectory';
 import type { ViewStateProps } from '@deck.gl/core/lib/deck';
 import type { Position2D } from 'deck.gl';
 import toast from 'react-hot-toast';
 import { useThemeContext } from '@/components/theme';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import appConfig from '@/config/app.config';
+import AnimationConfigCard from './components/AnimationConfigCard';
+import PreAnnotationCard from './components/PreAnnotationCard';
+import AreaInfoCard from './components/AreaInfoCard';
 
 interface PathData {
   id: number;
@@ -190,6 +186,8 @@ export default function Deck() {
 
   // Annotation State
   const [isLoading, setIsLoading] = useState(true);
+  const [speed] = useLocalStorage<number>(appConfig.local_storage.animation.speed, 80);
+  const [length] = useLocalStorage<number>(appConfig.local_storage.animation.length, 180);
   const [{ showRawTraj, isAnnotating, showDrawPolygonLayer }, annotationDispatch] = useReducer(
     annotationStateReducer,
     initailAnnotationState
@@ -201,7 +199,7 @@ export default function Deck() {
 
   const animate = () => {
     //@ts-ignore
-    setTime((t) => (t + 0.005) % 1.05);
+    setTime((t) => (t + 0.0001 * speed) % 1.05);
     //@ts-ignore
     animation.id = window.requestAnimationFrame(animate);
   };
@@ -214,7 +212,7 @@ export default function Deck() {
     }
     //@ts-ignore
     return () => window.cancelAnimationFrame(animation.id);
-  }, [animation, showRawTraj]);
+  }, [animation, showRawTraj, speed]);
 
   // Right Panel
   const [comment, setComment] = useState<string>('');
@@ -222,6 +220,13 @@ export default function Deck() {
     appConfig.local_storage.pre_annotation.auto_merge_circle,
     true
   );
+
+  const handleToggleMergeUTurns = () => {
+    const newState = !autoMergeCircle;
+    setAutoMergeCircle(newState);
+    setIsLoading(true);
+    preAnnotation(sdkResult as MatchingResultDetail, newState);
+  };
 
   const debounceCloseLoading = useMemo(
     () =>
@@ -332,12 +337,12 @@ export default function Deck() {
         widthMinPixels: 8,
         jointRounded: true,
         capRounded: true,
-        trailLength: 250,
+        trailLength: length,
         currentTime: time * timeLength,
         visible: showRawTraj,
       }),
     ];
-  }, [showRawTraj, rawTraj, time]);
+  }, [showRawTraj, rawTraj, time, length]);
 
   const layers = useMemo(() => {
     return [
@@ -504,45 +509,67 @@ export default function Deck() {
   };
 
   const handleTrajModify = () => {
-    if (editState !== EditState.DRAW_POLYGON || features.features.length === 0) {
-      toast('请先绘制区域', { id: 'draw-toast' });
+    if (editState === EditState.MODIFY_POINT) {
       return;
+    } else if (features.features.length === 0) {
+      toast('未划定选区，将选择所有坐标', { id: 'draw-toast' });
     } else if (features.features.length > 1) {
-      toast('检测到多个选区，将处理第一个选区', { id: 'draw-toast' });
+      toast.error('检测到多个选区，将处理第一个选区', { id: 'draw-toast' });
     }
+    annotationDispatch({ type: 'startDraw' });
     setEditState(EditState.MODIFY_POINT);
-    const rectangleArea = features.features[0];
-    const boundInfo = {
-      //@ts-ignore
-      minLon: rectangleArea.geometry.coordinates[0][0][0] as number,
-      //@ts-ignore
-      minLat: rectangleArea.geometry.coordinates[0][0][1] as number,
-      //@ts-ignore
-      maxLon: rectangleArea.geometry.coordinates[0][2][0] as number,
-      //@ts-ignore
-      maxLat: rectangleArea.geometry.coordinates[0][2][1] as number,
-    };
-    if (boundInfo.minLon > boundInfo.maxLon) {
-      [boundInfo.minLon, boundInfo.maxLon] = [boundInfo.maxLon, boundInfo.minLon];
-    } else if (boundInfo.minLat > boundInfo.maxLat) {
-      [boundInfo.minLat, boundInfo.maxLat] = [boundInfo.maxLat, boundInfo.minLat];
+    let bounds: any = undefined;
+    if (features.features.length > 0) {
+      const rectangleArea = features.features[0];
+      const boundInfo = {
+        //@ts-ignore
+        minLon: rectangleArea.geometry.coordinates[0][0][0] as number,
+        //@ts-ignore
+        minLat: rectangleArea.geometry.coordinates[0][0][1] as number,
+        //@ts-ignore
+        maxLon: rectangleArea.geometry.coordinates[0][2][0] as number,
+        //@ts-ignore
+        maxLat: rectangleArea.geometry.coordinates[0][2][1] as number,
+      };
+      if (boundInfo.minLon > boundInfo.maxLon) {
+        [boundInfo.minLon, boundInfo.maxLon] = [boundInfo.maxLon, boundInfo.minLon];
+      } else if (boundInfo.minLat > boundInfo.maxLat) {
+        [boundInfo.minLat, boundInfo.maxLat] = [boundInfo.maxLat, boundInfo.minLat];
+      }
+      log.info('[Bound Info]', boundInfo);
+      bounds = boundInfo;
     }
-    log.info('[Bound Info]', boundInfo);
     if (rawTraj.length > 0) {
-      const filteredTraj = rawTraj[0].path
-        .map((p, index) => ({
-          index: index,
-          timestamp: p.timestamp,
-          coordinates: p.coordinates,
-        }))
-        .filter((p) => {
-          return (
-            boundInfo.minLon <= p.coordinates[0] &&
-            p.coordinates[0] <= boundInfo.maxLon &&
-            boundInfo.minLat <= p.coordinates[1] &&
-            p.coordinates[1] <= boundInfo.maxLat
-          );
+      let filteredTraj = rawTraj[0].path.map((p, index) => ({
+        index: index,
+        timestamp: p.timestamp,
+        coordinates: p.coordinates,
+      }));
+      if (bounds) {
+        filteredTraj = filteredTraj.filter(
+          (p) =>
+            bounds.minLon <= p.coordinates[0] &&
+            p.coordinates[0] <= bounds.maxLon &&
+            bounds.minLat <= p.coordinates[1] &&
+            p.coordinates[1] <= bounds.maxLat
+        );
+        let view = new WebMercatorViewport({
+          width: mapContainerRef.current?.clientWidth ?? window.innerWidth,
+          height: mapContainerRef.current?.clientHeight ?? window.innerHeight,
         });
+        let { longitude, latitude, zoom } = view.fitBounds(
+          [
+            [bounds.minLon, bounds.minLat],
+            [bounds.maxLon, bounds.maxLat],
+          ],
+          {
+            padding: 100,
+          }
+        );
+        setViewState({ ...INITIAL_VIEW_STATE, longitude, latitude, zoom });
+      } else {
+        setViewState(initViewState);
+      }
       log.info('[Filtered Traj]', filteredTraj);
       setFeatures({
         type: 'FeatureCollection',
@@ -568,14 +595,14 @@ export default function Deck() {
       features.features.length === 0 ||
       rawTraj.length === 0
     ) {
-      toast('请先修正轨迹', { id: 'draw-toast' });
+      toast.error('请先修正轨迹', { id: 'draw-toast' });
       return;
     }
     const modifiedLine = features.features[0];
     const indexes: number[] = modifiedLine.properties.index;
     const coordinates: Position2D[] = modifiedLine.geometry.coordinates;
     if (indexes.length != coordinates.length) {
-      toast('[Bug] 修正轨迹时请不要添加或删除点，请重新选择区域', { id: 'draw-toast' });
+      toast.error('修正轨迹时请不要添加或删除点，请重新选择区域', { id: 'draw-toast' });
       setSelectedFeatureIndexes([]);
       setFeatures(initialFeaturesState);
       setEditState(EditState.DRAW_POLYGON);
@@ -598,21 +625,22 @@ export default function Deck() {
     toast('轨迹已修正，正在重新预标注', { id: 'pre-annotation' });
   };
 
+  const clearEditData = () => {
+    annotationDispatch({ type: 'endDraw' });
+    setFeatures(initialFeaturesState);
+    setEditState(EditState.NONE);
+    setSelectedFeatureIndexes([]);
+  };
+
   return (
-    <div className="absolute h-full w-full bg-slate-100 dark:bg-[#1e2433]">
-      <div className="absolute left-12 right-0 flex h-8 flex-row items-center justify-start">
-        <p className="select-none text-center font-semibold text-slate-400">
-          地图匹配数据集标注工具
+    <div className="absolute h-full w-full dark:bg-[#1e2433]">
+      <div className="absolute left-14 right-0 flex h-8 flex-row items-center justify-start">
+        <p className="select-none text-center font-black tracking-tight text-slate-600">
+          Map-Matching Dataset Generator
         </p>
-        <button
-          className="btn btn-ghost  btn-sm"
-          onClick={() => log.info('[Editable]', features, selectedFeatureIndexes)}
-        >
-          Print
-        </button>
       </div>
       <div
-        className="absolute top-8 left-12 bottom-8 right-52 overflow-hidden rounded-2xl shadow-inner lg:bottom-6"
+        className="absolute top-8 left-14 bottom-8 right-52 overflow-hidden rounded-2xl shadow-inner lg:bottom-6"
         ref={mapContainerRef}
       >
         <div
@@ -628,28 +656,25 @@ export default function Deck() {
             controller={{
               doubleClickZoom: false,
             }}
-            // getCursor={editableLayer.getCursor.bind(editableLayer)}
           >
             <StaticMap
               mapStyle={themeMode === 'dark' ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
               preventStyleDiffing={true}
               className="dark:brightness-150"
             />
-            {/*@ts-ignore*/}
-            {/* <NavigationControl className="absolute top-4 left-4" showZoom={true} /> */}
           </DeckGL>
         </div>
       </div>
-      <div className="absolute top-8 bottom-8 left-0 flex w-12 flex-col items-center justify-between lg:bottom-6">
+      <div className="absolute top-8 left-0 bottom-8 flex w-14 flex-col items-center justify-between px-3 lg:bottom-6">
         <div className="flex flex-col items-center justify-center">
-          <div className="mx-2 flex flex-col border-b-2 border-slate-600 border-opacity-50  py-5">
+          <div className="mx-3 flex flex-col border-b-2 border-slate-600 border-opacity-50  py-6">
             <button
-              className="btn-toolbar"
+              className="mdc-btn-toolbar"
               onClick={() => {
                 if (editState === EditState.NONE) {
                   annotationDispatch({ type: 'toggleRawTraj' });
                 } else {
-                  toast('正在编辑原始轨迹数据，无法切换', { id: 'left-panel' });
+                  toast.error('正在编辑原始轨迹数据，无法切换', { id: 'left-panel' });
                 }
               }}
             >
@@ -672,16 +697,16 @@ export default function Deck() {
             </button>
           </div>
 
-          <div className="mx-2 flex flex-col space-y-5 py-5">
+          <div className="mx-3 flex flex-col space-y-6 py-6">
             {showRawTraj && (
               <>
                 <button
-                  className={`btn-toolbar ${
+                  className={`mdc-btn-toolbar ${
                     editState === EditState.DRAW_POLYGON ? 'text-info' : ''
                   }`}
                   onClick={() => {
                     if (editState === EditState.MODIFY_POINT) {
-                      toast('轨迹修正未完成，请先清除改动或生成轨迹', { id: 'draw-toast' });
+                      toast.error('轨迹修正未完成，请先清除改动或生成轨迹', { id: 'draw-toast' });
                     } else {
                       annotationDispatch({ type: 'startDraw' });
                       setEditState(EditState.DRAW_POLYGON);
@@ -697,7 +722,7 @@ export default function Deck() {
                   </p>
                 </button>
                 <button
-                  className={`btn-toolbar ${
+                  className={`mdc-btn-toolbar ${
                     editState === EditState.MODIFY_POINT ? 'text-info' : ''
                   }`}
                   onClick={handleTrajModify}
@@ -709,23 +734,7 @@ export default function Deck() {
                     轨迹
                   </p>
                 </button>
-                <button
-                  className="btn-toolbar"
-                  onClick={() => {
-                    annotationDispatch({ type: 'endDraw' });
-                    setFeatures(initialFeaturesState);
-                    setEditState(EditState.NONE);
-                    setSelectedFeatureIndexes([]);
-                  }}
-                >
-                  <Eraser size={28} />
-                  <p className="text-xs">
-                    清除
-                    <br />
-                    改动
-                  </p>
-                </button>
-                <button className="btn-toolbar" onClick={handleGenerateNewRawTraj}>
+                <button className="mdc-btn-toolbar" onClick={handleGenerateNewRawTraj}>
                   <Route size={28} />
                   <p className="text-xs">
                     生成
@@ -733,11 +742,19 @@ export default function Deck() {
                     轨迹
                   </p>
                 </button>
+                <button className="mdc-btn-toolbar" onClick={clearEditData}>
+                  <Eraser size={28} />
+                  <p className="text-xs">
+                    清除
+                    <br />
+                    改动
+                  </p>
+                </button>
               </>
             )}
             {!showRawTraj && isAnnotating && currentArea.length > 0 && (
               <>
-                <button className="btn-toolbar">
+                <button className="mdc-btn-toolbar">
                   <SquareCheck size={28} />
                   <p className="text-xs">
                     全部
@@ -746,7 +763,7 @@ export default function Deck() {
                   </p>
                 </button>
                 {currentArea[0].optionalTrajs.map((traj) => (
-                  <button className="btn-toolbar">
+                  <button className="mdc-btn-toolbar" key={`choice-${traj.index_key}`}>
                     {traj.index_key === 1 ? (
                       <Square1 size={28} />
                     ) : traj.index_key === 2 ? (
@@ -754,15 +771,15 @@ export default function Deck() {
                     ) : (
                       <Square3 size={28} />
                     )}
-                    <p className="text-xs">仅{traj.index_key}</p>
+                    <p className="text-xs">仅 {traj.index_key}</p>
                   </button>
                 ))}
               </>
             )}
           </div>
         </div>
-        <div className="mx-2 flex flex-col space-y-5 border-t-2 border-slate-600  border-opacity-50 py-5">
-          <button className="btn-toolbar" onClick={() => setViewState(initViewState)}>
+        <div className="mx-3 flex flex-col space-y-6 border-t-2 border-slate-600  border-opacity-50 py-6">
+          <button className="mdc-btn-toolbar" onClick={() => setViewState(initViewState)}>
             <ArrowsMaximize size={28} />
             <p className="text-xs">
               视图
@@ -770,7 +787,15 @@ export default function Deck() {
               复位
             </p>
           </button>
-          <button className="btn-toolbar" onClick={() => setViewState(initViewState)}>
+          <button
+            className="mdc-btn-toolbar"
+            onClick={() => {
+              setIsLoading(true);
+              setCheckedAreas([]);
+              clearEditData();
+              preAnnotation(sdkResult as MatchingResultDetail);
+            }}
+          >
             <Refresh size={28} />
             <p className="text-xs">
               重新
@@ -780,7 +805,7 @@ export default function Deck() {
           </button>
         </div>
       </div>
-      <p className="absolute bottom-0 left-12 flex h-8 items-center justify-end text-sm italic text-slate-500 lg:h-6">
+      <p className="absolute bottom-0 left-14 flex h-8 items-center justify-end text-sm italic text-slate-500 lg:h-6">
         ©
         <a
           href="https://carto.com/about-carto/"
@@ -802,51 +827,20 @@ export default function Deck() {
       </p>
       <div className="absolute right-0 top-8 bottom-8 flex w-52 flex-col items-stretch justify-between px-3 lg:bottom-6">
         <div className="flex flex-col">
-          <div className="mb-1.5 items-start pl-3 font-semibold  text-slate-500">标注设置</div>
-          <div className="card w-full rounded-xl bg-slate-200 shadow-inner dark:bg-[#2b313f]">
-            <div className="card-body m-3 p-0">
-              <div className="card-actions flex-row items-center justify-between">
-                <p className="text-sm">启用自动环路剔除</p>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-xs m-auto"
-                  checked={autoMergeCircle}
-                  onChange={() => {
-                    const newState = !autoMergeCircle;
-                    setAutoMergeCircle(newState);
-                    setIsLoading(true);
-                    preAnnotation(sdkResult as MatchingResultDetail, newState);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 mb-1.5 items-start pl-3 font-semibold text-slate-500">界面设置</div>
-          <div className="card w-full rounded-xl bg-slate-200 shadow-inner dark:bg-[#2b313f]">
-            <div className="card-body m-3 p-0">
-              <div className="card-actions flex-col items-stretch justify-between space-y-1">
-                <p className="text-sm">动画速度: {trajName}</p>
-                <p className="text-sm">拖影长度: {rawTraj[0]?.path.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 mb-1.5 items-start pl-3 font-semibold text-slate-500">区域信息</div>
-          <div className="card mb-4 w-full rounded-xl bg-slate-200 shadow-inner dark:bg-[#2b313f]">
-            <div className="card-body m-3 p-0">
-              <div className="card-actions flex-col items-stretch justify-between space-y-1">
-                <p className="text-sm">文件名: {trajName}</p>
-                <p className="text-sm">原始坐标数: {rawTraj[0]?.path.length}</p>
-                <p className="text-sm">预标注方法: 3</p>
-                <p className="text-sm">待复核区域: {mismatchedAreas.length}</p>
-              </div>
-            </div>
-          </div>
+          <PreAnnotationCard onChange1={handleToggleMergeUTurns} />
+          <AnimationConfigCard />
+          <AreaInfoCard
+            fileName={trajName}
+            gpsCount={rawTraj[0]?.path.length}
+            methodCount={sdkResult?.matching_result.length}
+            uncheckedCount={mismatchedAreas.length}
+          />
         </div>
         {isAnnotating && currentArea.length > 0 && (
           <div className="flex grow flex-col">
             <div className="mb-1.5 items-start pl-3 font-semibold text-slate-500">人工核验</div>
             <div className="card h-full w-full rounded-xl bg-[#2b313f] shadow-inner">
-              <div className="card-body m-3 p-0">
+              <div className="card-body mx-3.5 my-3 p-0">
                 <div
                   className={`card-actions grid h-full grid-cols-1 ${
                     currentArea[0].optionalTrajs.length === 2 ? 'grid-rows-2' : 'grid-rows-3'
@@ -855,7 +849,7 @@ export default function Deck() {
                   {currentArea[0].optionalTrajs.map((traj) => {
                     return (
                       <button
-                        className="flex h-full flex-row items-center justify-center rounded-lg pr-2 text-white opacity-90 bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90"
+                        className="flex h-full flex-row items-center justify-center rounded-lg pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90"
                         onClick={() => handleArea(traj.name)}
                         key={traj.name}
                         style={{
@@ -891,27 +885,27 @@ export default function Deck() {
         )}
         {!isAnnotating && (
           <div className="flex grow flex-col">
-            <div className="mb-1.5 items-start pl-3 font-semibold text-slate-500">
+            <div className="mdc-card-header mb-1.5">
               {mismatchedAreas.length === 0 ? '结果提交' : '开始标注'}
             </div>
             <div className="card h-full w-full rounded-xl bg-slate-200 shadow-inner dark:bg-[#2b313f]">
-              <div className="card-body m-3 flex-col p-0">
+              <div className="card-body mx-3.5 my-3 flex-col p-0">
                 <textarea
                   className="textarea flex w-full grow resize-none bg-slate-100 shadow-inner dark:bg-[#1e2433]"
                   value={comment}
-                  placeholder="反馈匹配过程发现的问题"
+                  placeholder="反馈遇到的问题"
                   onChange={(e) => setComment(e.target.value)}
                 />
                 {mismatchedAreas.length === 0 ? (
                   <button
-                    className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-info pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
+                    className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-sky-600 pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
                     onClick={handleSubmit}
                   >
                     <p className="text-3xl font-extrabold italic opacity-70">Submit</p>
                   </button>
                 ) : (
                   <button
-                    className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-info pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
+                    className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-sky-600 pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
                     onClick={showNextUncheckedArea}
                   >
                     <p className="text-3xl font-extrabold italic opacity-70">Start</p>

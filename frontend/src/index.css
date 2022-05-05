@@ -7,8 +7,16 @@
     @apply mx-auto flex max-w-xs items-center space-x-1.5 rounded-xl bg-white p-1.5 shadow-sm;
   }
 
-  .btn-toolbar {
-    @apply w-8 flex-col items-center justify-between space-y-1 overflow-visible text-slate-400 transition-colors hover:text-info focus:outline-none active:brightness-95;
+  .mdc-btn-toolbar {
+    @apply w-8 flex-col items-center justify-between space-y-1 overflow-visible text-slate-400 transition-colors hover:text-sky-400 focus:outline-none active:brightness-95;
+  }
+
+  .mdc-card-header {
+    @apply items-start pl-3 font-semibold text-slate-400;
+  }
+
+  .mdc-card-body {
+    @apply flex w-full rounded-xl bg-slate-200 p-3 shadow-inner dark:bg-[#2b313f];
   }
 }
 

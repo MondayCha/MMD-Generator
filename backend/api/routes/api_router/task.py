@@ -6,6 +6,7 @@ Description: api/tasks
 from flask import request, g, current_app
 from app import db
 from flasgger import swag_from
+from flask_jwt_extended import jwt_required
 
 # Utils
 from api.utils.os_helper import *
@@ -26,6 +27,7 @@ from ..api_router import bp
         }
     }
 })
+@jwt_required()
 def get_task_info():
     """
     Get tarj info

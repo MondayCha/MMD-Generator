@@ -5,4 +5,7 @@ Flask_Cors
 flask_marshmallow
 Flask_Migrate
 Flask_SQLAlchemy
+hashids
 python-dotenv
+SQLAlchemy
+Werkzeug

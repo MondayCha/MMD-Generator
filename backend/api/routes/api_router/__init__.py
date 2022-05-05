@@ -13,3 +13,4 @@ from . import match
 from . import trajectory
 from . import task
 from . import sdk
+from . import auth

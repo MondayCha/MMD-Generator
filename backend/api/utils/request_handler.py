@@ -17,6 +17,8 @@ class RETStatus(IntEnum):
     SUCCESS = 20000, 'Operation succeed'
     JSON_INVALID = 40001, 'JSON invalid'
     DATA_INVALID = 40002, 'Data invalid'
+    JWT_INVALID = 40101, 'JWT invalid'
+    AUTH_ERR = 40102, 'Error authentication'
     PATH_INVALID = 40401, 'Path invalid'
     PARAM_INVALID = 40402, 'Param invalid'
     GENERAL_OTHER_ERR = 40500, 'General other error'

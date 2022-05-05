@@ -3,6 +3,7 @@
 """
 from os import environ, path
 from dotenv import load_dotenv
+from datetime import timedelta
 
 
 basedir = path.abspath(path.dirname(__file__))
@@ -11,7 +12,10 @@ load_dotenv(path.join(basedir, '.env'))
 
 class Config(object):
     SECRET_KEY = environ.get('SECRET_KEY') or 'map-matching-dataset-generator'
+    JWT_SECRET_KEY = environ.get('JWT_SECRET_KEY') or 'map-matching-dataset-generator'
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     UPLOAD_DIR = path.join(basedir, 'media')
+
 
     # Map-Matching SDK
     SDK_ENTRYPONIT_PATH = '~/documents/map-matching/map_matching/build/libs/map_matching-all.jar'

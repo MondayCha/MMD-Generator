@@ -14,13 +14,18 @@ import { RouteObject } from 'react-router-dom';
  * @example(non server-side render): const Component = React.lazy(() => import('./Component'));
  */
 const Home = lazy(() => import('@pages/Home'));
-const Annotation = lazy(() => import('@pages/Annotation'));
+const Annotation = lazy(() => import('@/pages/Annotation'));
 const AdminUpload = lazy(() => import('@pages/Admin/Upload'));
+const Login = lazy(() => import('@pages/Auth/Login'));
 
 export const routerConfig: RouteObject[] = [
   {
     path: '/',
     element: <Home />,
+  },
+  {
+    path: '/login',
+    element: <Login />,
   },
   {
     path: '/annotations/:taskId/:trajName',
