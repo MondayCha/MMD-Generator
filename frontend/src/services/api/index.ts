@@ -1,11 +1,9 @@
-import * as matching from './matching';
-import * as trajectory from './trajectory';
-import * as task from './task';
+import * as data from './data';
+import * as group from './dataGroup';
 import * as user from './user';
 
 export const api = {
-  matching,
-  trajectory,
-  task,
+  data,
+  group,
   user,
 };

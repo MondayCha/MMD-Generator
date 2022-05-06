@@ -1,9 +1,4 @@
-'''
-Author: MondayCha
-Date: 2022-04-09 21:38:24
-Description: api/tasks
-'''
-from flask import request, g, current_app
+from flask import request
 from app import db, jwt
 from flasgger import swag_from
 from flask_jwt_extended import (
@@ -20,13 +15,13 @@ from api.utils.os_helper import *
 from api.utils.request_handler import *
 
 # Models
-from api.models.authorize import User
+from api.models.user import User
 
 # System
 from datetime import datetime, timedelta, timezone
 import json
 
-from ..api_router import bp
+from . import bp
 
 
 @jwt.invalid_token_loader
@@ -35,14 +30,13 @@ def my_invalid_token_callback(error):
 
 
 @jwt.expired_token_loader
-def my_expired_token_callback(error):
-    return bad_request(RETStatus.JWT_INVALID, HTTPStatus.UNAUTHORIZED, error)
+def my_expired_token_callback(jwt_header, jwt_data):
+    return bad_request(RETStatus.JWT_INVALID, HTTPStatus.UNAUTHORIZED)
 
 
 @jwt.unauthorized_loader
 def my_unauthorized_loader_callback(error):
     return bad_request(RETStatus.JWT_INVALID, HTTPStatus.UNAUTHORIZED, error)
-
 
 
 @jwt.user_lookup_loader
@@ -69,11 +63,11 @@ def refresh_expiring_jwts(response):
         return response
 
 
-@bp.route('/register', methods=['POST'])
+@bp.route('/users', methods=['POST'])
 @swag_from({
     'responses': {
         HTTPStatus.OK.value: {
-            'description': 'register',
+            'description': 'Add user',
         }
     }
 })
@@ -96,8 +90,18 @@ def register():
         return good_request('register success')
 
 
+@bp.route("/user", methods=["GET"])
+@jwt_required()
+def get_current_user():
+    # We can now access our sqlalchemy User object via `current_user`.
+    return good_request(detail={
+        "username": current_user.username,
+        "usertype": current_user.usertype,
+        "id": current_user.id,
+    })
 
-@bp.route('/login', methods=['POST'])
+
+@bp.route('/auth/login', methods=['POST'])
 @swag_from({
     'responses': {
         HTTPStatus.OK.value: {
@@ -114,7 +118,7 @@ def login():
     password = request.json.get("password", None)
 
     user = User.query.filter_by(username=username).one_or_none()
-    if not user or not user.password == password:
+    if not user or not user.check_password(password):
         return bad_request(status_code=HTTPStatus.OK, ret_status_code=RETStatus.AUTH_ERR)
 
     access_token = create_access_token(identity=user.id)
@@ -127,7 +131,7 @@ def login():
     return response
 
 
-@bp.route('/logout', methods=['POST'])
+@bp.route('/auth/logout', methods=['POST'])
 @swag_from({
     'responses': {
         HTTPStatus.OK.value: {
@@ -135,7 +139,8 @@ def login():
         }
     }
 })
-def lologoutgin():
+@jwt_required()
+def logout():
     """
     Logout
     ---
@@ -147,15 +152,3 @@ def lologoutgin():
         })
     unset_access_cookies(response)
     return response
-
-
-@bp.route("/user", methods=["GET"])
-@jwt_required()
-def protected():
-    # We can now access our sqlalchemy User object via `current_user`.
-    return good_request(detail={
-        "username": current_user.username,
-        "usertype": current_user.usertype,
-        "id": current_user.id,
-        "password": current_user.password
-        })

@@ -28,7 +28,7 @@ export const routerConfig: RouteObject[] = [
     element: <Login />,
   },
   {
-    path: '/annotations/:taskId/:trajName',
+    path: '/annotations/:groupHashid/:dataName',
     element: <Annotation />,
   },
   {
@@ -36,7 +36,7 @@ export const routerConfig: RouteObject[] = [
     element: <AdminUpload />,
   },
   {
-    path: '/admin/upload/:taskId',
+    path: '/admin/upload/:groupHashid',
     element: <AdminUpload />,
   },
 ];

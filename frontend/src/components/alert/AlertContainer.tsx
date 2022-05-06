@@ -3,7 +3,7 @@ import { X } from 'tabler-icons-react';
 
 const AlertContainer = () => {
   return (
-    <Toaster position="bottom-center">
+    <Toaster position="bottom-center" containerStyle={{ bottom: 36 }}>
       {(t) => (
         // https://github.com/timolins/react-hot-toast/issues/153
         <div
@@ -11,7 +11,7 @@ const AlertContainer = () => {
             t.visible ? 'animate-enter' : 'animate-leave'
           } flex items-center rounded-xl ${
             t.type === 'error' ? 'bg-orange-700' : 'bg-sky-700'
-          } p-2.5 leading-none text-indigo-100 lg:inline-flex`}
+          } p-2.5 leading-none text-indigo-50 lg:inline-flex`}
           role="alert"
         >
           <span className="mr-1 ml-1 flex-auto text-left font-semibold">

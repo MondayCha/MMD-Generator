@@ -25,18 +25,6 @@ export interface MatchingMethodDetail {
   raw_traj: CoordinateDetail[];
 }
 
-export interface TrajectoryDetail {
-  name: string;
-  success: boolean;
-  bounds: {
-    left_top: CoordinateDetail;
-    right_bottom: CoordinateDetail;
-  };
-  raw_traj: TCoordinateDetail[];
-  matching_methods: MatchingMethodDetail[];
-  common_trajs: SubTrajectoryDetail[];
-}
-
 export interface MethodResultDetail {
   method_name: string;
   trajectory: CoordinateDetail[];
@@ -48,23 +36,15 @@ export interface MethodResultDetail {
 export type Bounds = [[number, number], [number, number]];
 
 export interface MatchingResultDetail {
-  task_id: string;
+  group_id: string;
   traj_name: string;
   bounds: Bounds;
   raw_traj: TCoordinateDetail[];
   matching_result: MethodResultDetail[];
 }
 
-export interface MatchingDetail {
-  task_id: string;
-  matching_result: {
-    success: TrajectoryDetail[];
-    failed: TrajectoryDetail[];
-  };
-}
-
-export interface TaskDetail {
-  task_id: string;
+export interface GroupDetail {
+  group_id: string;
   matching_result: {
     success: string[];
     failed: string[];

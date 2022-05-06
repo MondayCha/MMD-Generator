@@ -1,4 +1,4 @@
-from api.models.task import Task
+from api.models.data_group import Task
 from app import ma
 
 

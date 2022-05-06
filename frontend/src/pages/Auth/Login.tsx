@@ -31,7 +31,7 @@ export default function Login() {
     let username = formData.get('username') as string;
     let password = formData.get('password') as string;
     api.user
-      .register({ username: username, password: password })
+      .register(username, password)
       .then((data) => {
         toast('注册成功');
       })
@@ -42,31 +42,51 @@ export default function Login() {
 
   // login
   return (
-    <div className="h-screen">
-      <form onSubmit={handleLogin}>
-        <input type="text" name="username" />
-        <input type="password" name="password" />
-        <button className="btn btn-primary" type="submit">
-          Login
-        </button>
+    <div className="flex h-screen w-screen items-center justify-center space-x-10">
+      <form onSubmit={handleRegister} className="card max-w-xs shadow-lg">
+        <div className="card-body">
+          <label>
+            Username
+            <input type="text" name="username" className="input w-full" />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" className="input w-full" />
+          </label>
+          <div className="card-actions mt-1 w-full">
+            <button className="btn btn-primary w-full" type="submit">
+              Register
+            </button>
+          </div>
+        </div>
       </form>
-      <form onSubmit={handleRegister}>
-        <input type="text" name="username" />
-        <input type="password" name="password" />
-        <button className="btn btn-primary" type="submit">
-          Register
-        </button>
+      <form onSubmit={handleLogin} className="card max-w-xs shadow-lg">
+        <div className="card-body">
+          <label>
+            Username
+            <input type="text" name="username" className="input w-full" />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" className="input w-full" />
+          </label>
+          <div className="card-actions mt-1 grid w-full grid-cols-2">
+            <button className="btn btn-primary" type="submit">
+              Login
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                api.user.getUserInfo().then((data) => {
+                  log.info(data.detail);
+                });
+              }}
+            >
+              Check Me
+            </button>
+          </div>
+        </div>
       </form>
-      <button
-        className="btn btn-primary"
-        onClick={() => {
-          api.user.getUser().then((data) => {
-            log.info(data.detail);
-          });
-        }}
-      >
-        Me
-      </button>
     </div>
   );
 }

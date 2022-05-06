@@ -3,7 +3,7 @@
  * @Date: 2022-04-30 22:19:12
  * @Description: Upload GPS data to server
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import useFlooksStore from '@hooks/useFlooksStore';
@@ -11,12 +11,12 @@ import { useDropzone } from 'react-dropzone';
 import { api } from '@services/api';
 import { useTranslation } from 'react-i18next';
 import { useThemeContext } from '@components/theme';
-import { Language, Moon, Settings } from 'tabler-icons-react';
+import { Language, Moon } from 'tabler-icons-react';
 import toast from 'react-hot-toast';
-// Types
-import { MatchingDetail, TaskDetail } from '@services/type';
-import { AxiosRequestConfig } from 'axios';
 import log from '@middleware/logger';
+// Types
+import type { GroupDetail } from '@services/type';
+import type { AxiosRequestConfig } from 'axios';
 
 enum MatchingStatus {
   idling,
@@ -29,7 +29,7 @@ enum MatchingStatus {
 const Upload = () => {
   // hooks (theme, i18n)
   const { t } = useTranslation();
-  const { taskId } = useParams();
+  const { groupHashid } = useParams();
   const navigate = useNavigate();
   const { switchLocaleMode } = useFlooksStore();
   const { toggleTheme } = useThemeContext();
@@ -38,20 +38,19 @@ const Upload = () => {
   const [task, setTask] = useState<string>('');
   const [successTrajNames, setSuccessTrajNames] = useState<string[]>([]);
   const [failedTrajNames, setFailedTrajNames] = useState<string[]>([]);
-  const [progress, setProgress] = useState<number>(0);
   const [hasSaved, setHasSaved] = useState<boolean>(true);
 
   useEffect(() => {
-    if (taskId && successTrajNames.length == 0 && failedTrajNames.length == 0) {
-      api.task.getTaskInfo(taskId).then(({ detail }) => {
-        let { task_id, matching_result } = detail as TaskDetail;
+    if (groupHashid && successTrajNames.length == 0 && failedTrajNames.length == 0) {
+      api.group.getDataGroup(groupHashid).then(({ detail }) => {
+        let { group_id: task_id, matching_result } = detail as GroupDetail;
         setSuccessTrajNames(matching_result.success);
         setFailedTrajNames(matching_result.failed);
         setMatchingStatus(MatchingStatus.working);
         setTask(task_id);
       });
     }
-  }, [taskId]);
+  }, [groupHashid]);
 
   /**
    * Pop alert if files has not been saved before closing the window
@@ -105,10 +104,10 @@ const Upload = () => {
       if (acceptedFiles.length > 0) {
         let formData = new FormData();
         acceptedFiles.map((acceptedFile) => formData.append('files', acceptedFile));
-        api.matching
-          .matchTraj(formData, matchingConfig)
+        api.group
+          .uploadDataGroup(formData, matchingConfig)
           .then(({ detail }) => {
-            let { task_id, matching_result } = detail as TaskDetail;
+            let { group_id: task_id, matching_result } = detail as GroupDetail;
             toast(`Matching task ${task_id} is submitted`, { id: 'dropZone' });
             setTask(task_id);
             setSuccessTrajNames(matching_result.success);

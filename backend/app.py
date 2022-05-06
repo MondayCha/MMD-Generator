@@ -14,12 +14,15 @@ from flask_marshmallow import Marshmallow
 from hashids import Hashids
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
 
 db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
 bcrypt = Bcrypt()
 jwt = JWTManager()
+admin = Admin()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -31,7 +34,10 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     ma.init_app(app)
+    bcrypt.init_app(app)
     jwt.init_app(app)
+    admin.init_app(app)
+    import api.utils.admin
     swagger = Swagger(app)
     CORS(app, supports_credentials=True)
 

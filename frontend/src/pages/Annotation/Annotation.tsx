@@ -116,7 +116,7 @@ function annotationStateReducer(
     case 'startAnnotating':
       return { showRawTraj: false, showDrawPolygonLayer: false, isAnnotating: true };
     case 'endAnnotating':
-      return { ...state, isAnnotating: !state.isAnnotating };
+      return { ...state, isAnnotating: false };
     case 'startDraw':
       return { ...state, showRawTraj: true, showDrawPolygonLayer: true };
     case 'endDraw':
@@ -136,10 +136,11 @@ const enum EditState {
   NONE,
   DRAW_POLYGON,
   MODIFY_POINT,
+  DONE,
 }
 
 export default function Deck() {
-  const { taskId, trajName } = useParams();
+  const { groupHashid, dataName } = useParams();
   const { themeMode } = useThemeContext();
 
   // Map State
@@ -182,12 +183,16 @@ export default function Deck() {
 
   // Data During Annotating
   const [currentArea, setCurrentArea] = useState<MismatchedArea[]>([]);
+  const [currentPathIndex, setCurrentPathIndex] = useState<number>(-1);
   const [checkedAreas, setCheckedAreas] = useState<MismatchedArea[]>([]);
 
   // Annotation State
   const [isLoading, setIsLoading] = useState(true);
-  const [speed] = useLocalStorage<number>(appConfig.local_storage.animation.speed, 80);
-  const [length] = useLocalStorage<number>(appConfig.local_storage.animation.length, 180);
+  const [speed, setSpeed] = useLocalStorage<number>(appConfig.local_storage.animation.speed, 80);
+  const [length, setLength] = useLocalStorage<number>(
+    appConfig.local_storage.animation.length,
+    180
+  );
   const [{ showRawTraj, isAnnotating, showDrawPolygonLayer }, annotationDispatch] = useReducer(
     annotationStateReducer,
     initailAnnotationState
@@ -205,14 +210,14 @@ export default function Deck() {
   };
 
   useEffect(() => {
-    if (showRawTraj) {
+    if (showRawTraj || currentPathIndex > -1) {
       log.info('window requestAnimationFrame');
       //@ts-ignore
       animation.id = window.requestAnimationFrame(animate);
     }
     //@ts-ignore
     return () => window.cancelAnimationFrame(animation.id);
-  }, [animation, showRawTraj, speed]);
+  }, [animation, showRawTraj, speed, currentPathIndex]);
 
   // Right Panel
   const [comment, setComment] = useState<string>('');
@@ -224,7 +229,7 @@ export default function Deck() {
   const handleToggleMergeUTurns = () => {
     const newState = !autoMergeCircle;
     setAutoMergeCircle(newState);
-    setIsLoading(true);
+    resetAll();
     preAnnotation(sdkResult as MatchingResultDetail, newState);
   };
 
@@ -240,7 +245,7 @@ export default function Deck() {
   const preAnnotation = useCallback(
     (result: MatchingResultDetail, options?: boolean) => {
       if (result) {
-        const { bounds, raw_traj, matching_result } = result;
+        const { bounds, raw_traj, matching_result, traj_name } = result;
         const wasmAreas = pre_annotate(matching_result, options ?? autoMergeCircle);
         setAllAreas(wasmAreas);
         log.info('[Pre Annotation]', wasmAreas);
@@ -257,7 +262,7 @@ export default function Deck() {
         ]);
         setRawTraj([
           {
-            name: 'raw',
+            name: traj_name,
             path: raw_traj.map((point) => {
               return {
                 coordinates: [point.longitude, point.latitude],
@@ -282,38 +287,47 @@ export default function Deck() {
         log.info('[Fit Bounds] end', bounds, { longitude, latitude, zoom });
         let newViewState = {
           ...INITIAL_VIEW_STATE,
-          longitude: longitude,
-          latitude: latitude,
-          zoom: zoom,
+          longitude,
+          latitude,
+          zoom,
           pitch: 0,
         };
         setViewState({ ...newViewState, bearing: 30, pitch: 50 });
         setInitViewState(newViewState);
         areas_need_check.forEach((area) => {
-          let { longitude, latitude, zoom } = view.fitBounds(area.bounds, { padding: 100 });
+          let { longitude, latitude, zoom } = view.fitBounds(area.bounds, { padding: 60 });
           area.setBoundsInfo(longitude, latitude, zoom);
         });
         setMismatchedAreas(areas_need_check);
         debounceCloseLoading();
-      } else {
       }
     },
     [sdkResult, debounceCloseLoading]
   );
 
   useEffect(() => {
-    api.trajectory.getMatchingResult(taskId, trajName).then(({ detail }) => {
+    api.data.getRawTrajMatching(groupHashid, dataName).then(({ detail }) => {
       setSdkResult(detail as MatchingResultDetail);
       preAnnotation(detail as MatchingResultDetail);
     });
-  }, [taskId, trajName]);
+  }, [groupHashid, dataName]);
 
   const rawTrajLayers = useMemo(() => {
-    if (rawTraj.length === 0) {
+    if (rawTraj.length === 0 || sdkResult === undefined) {
       return [];
     }
     const timeLength = rawTraj[0].time.end - rawTraj[0].time.start;
     return [
+      new PathLayer({
+        id: 'const-raw-traj',
+        data: [sdkResult.raw_traj],
+        pickable: true,
+        widthUnits: 'pixels',
+        getWidth: 6,
+        getPath: (d) => d.map((point) => [point.longitude, point.latitude] as Position2D),
+        getColor: [77, 184, 72, 50],
+        visible: showRawTraj && editState === EditState.DONE,
+      }),
       new PathLayer({
         id: 'raw-traj',
         data: rawTraj,
@@ -327,7 +341,7 @@ export default function Deck() {
         visible: showRawTraj,
       }),
       new TripsLayer({
-        id: 'trips-layer',
+        id: 'trips-raw-layer',
         data: rawTraj,
         getPath: (d) => d.path.map((p) => p.coordinates),
         // deduct start timestamp from each data point to avoid overflow
@@ -342,11 +356,10 @@ export default function Deck() {
         visible: showRawTraj,
       }),
     ];
-  }, [showRawTraj, rawTraj, time, length]);
+  }, [showRawTraj, rawTraj, time, length, editState, sdkResult]);
 
   const layers = useMemo(() => {
     return [
-      ...rawTrajLayers,
       new PathLayer({
         id: 'common-trajs',
         data: matchedPaths,
@@ -409,11 +422,30 @@ export default function Deck() {
       ...currentArea.map((area) => {
         return new PathLayer({
           id: `check-path-${area.id}`,
-          data: area.optionalTrajs,
+          data: area.optionalTrajs.filter(
+            (_, index) => index === currentPathIndex || currentPathIndex < 0
+          ),
           widthUnits: 'pixels',
           getWidth: 4,
           getPath: (d) => d.trajectory,
-          getColor: (d) => [...d.color, 200],
+          getColor: (d) => [...d.color, currentPathIndex < 0 ? 222 : 100],
+          visible: !showRawTraj && isAnnotating,
+        });
+      }),
+      ...currentArea.map((area) => {
+        return new TripsLayer({
+          id: `current-trip-${area.id}`,
+          data: area.optionalTrajs.filter((_, index) => index === currentPathIndex),
+          getPath: (d) => d.trajectory,
+          // deduct start timestamp from each data point to avoid overflow
+          getTimestamps: (d) => d.trajectory.map((_, i) => i / d.trajectory.length),
+          getColor: (d) => [...d.color],
+          opacity: 0.9,
+          widthMinPixels: 6,
+          jointRounded: true,
+          capRounded: true,
+          trailLength: 0.3,
+          currentTime: time,
           visible: !showRawTraj && isAnnotating,
         });
       }),
@@ -442,9 +474,19 @@ export default function Deck() {
           });
         }),
     ];
-  }, [isAnnotating, mismatchedAreas, currentArea, checkedAreas, rawTrajLayers, matchedPaths]);
+  }, [
+    time,
+    showRawTraj,
+    isAnnotating,
+    mismatchedAreas,
+    currentArea,
+    checkedAreas,
+    matchedPaths,
+    currentPathIndex,
+  ]);
 
   const showNextUncheckedArea = () => {
+    setCurrentPathIndex(-1);
     annotationDispatch({ type: 'startAnnotating' });
     const nextUncheckedArea =
       mismatchedAreas.find((area) => area.areaState === AreaState.Unchecked) ??
@@ -563,7 +605,7 @@ export default function Deck() {
             [bounds.maxLon, bounds.maxLat],
           ],
           {
-            padding: 100,
+            padding: 60,
           }
         );
         setViewState({ ...INITIAL_VIEW_STATE, longitude, latitude, zoom });
@@ -621,8 +663,15 @@ export default function Deck() {
     annotationDispatch({ type: 'endDraw' });
     setSelectedFeatureIndexes([]);
     setFeatures(initialFeaturesState);
-    setEditState(EditState.NONE);
+    setEditState(EditState.DONE);
+    setCurrentArea([]);
+    annotationDispatch({ type: 'endAnnotating' });
+    const modifiedTrajString = JSON.stringify(modifiedRawTraj);
+    setIsLoading(true);
     toast('轨迹已修正，正在重新预标注', { id: 'pre-annotation' });
+    api.data.getModifiedTrajMatching(groupHashid, modifiedTrajString).then(({ detail }) => {
+      preAnnotation(detail as MatchingResultDetail);
+    });
   };
 
   const clearEditData = () => {
@@ -630,6 +679,23 @@ export default function Deck() {
     setFeatures(initialFeaturesState);
     setEditState(EditState.NONE);
     setSelectedFeatureIndexes([]);
+  };
+
+  const resetAll = () => {
+    setCurrentArea([]);
+    annotationDispatch({ type: 'endAnnotating' });
+    setIsLoading(true);
+    setCheckedAreas([]);
+    clearEditData();
+  };
+
+  const handleResetAll = () => {
+    resetAll();
+    setAutoMergeCircle(true);
+    setSpeed(80);
+    setLength(160);
+    preAnnotation(sdkResult as MatchingResultDetail);
+    log.info('[Reset All]', mismatchedAreas);
   };
 
   return (
@@ -649,7 +715,11 @@ export default function Deck() {
           }`}
         >
           <DeckGL
-            layers={showDrawPolygonLayer ? [...rawTrajLayers, editableLayer] : layers}
+            layers={
+              showDrawPolygonLayer
+                ? [...rawTrajLayers, editableLayer]
+                : [...rawTrajLayers, ...layers]
+            }
             ContextProvider={MapContext.Provider}
             viewState={viewState}
             onViewStateChange={(v) => setViewState(v.viewState)}
@@ -671,7 +741,7 @@ export default function Deck() {
             <button
               className="mdc-btn-toolbar"
               onClick={() => {
-                if (editState === EditState.NONE) {
+                if (editState === EditState.NONE || editState === EditState.DONE) {
                   annotationDispatch({ type: 'toggleRawTraj' });
                 } else {
                   toast.error('正在编辑原始轨迹数据，无法切换', { id: 'left-panel' });
@@ -734,14 +804,6 @@ export default function Deck() {
                     轨迹
                   </p>
                 </button>
-                <button className="mdc-btn-toolbar" onClick={handleGenerateNewRawTraj}>
-                  <Route size={28} />
-                  <p className="text-xs">
-                    生成
-                    <br />
-                    轨迹
-                  </p>
-                </button>
                 <button className="mdc-btn-toolbar" onClick={clearEditData}>
                   <Eraser size={28} />
                   <p className="text-xs">
@@ -750,11 +812,22 @@ export default function Deck() {
                     改动
                   </p>
                 </button>
+                <button className="mdc-btn-toolbar" onClick={handleGenerateNewRawTraj}>
+                  <Route size={28} />
+                  <p className="text-xs">
+                    生成
+                    <br />
+                    轨迹
+                  </p>
+                </button>
               </>
             )}
             {!showRawTraj && isAnnotating && currentArea.length > 0 && (
               <>
-                <button className="mdc-btn-toolbar">
+                <button
+                  className={`mdc-btn-toolbar ${currentPathIndex === -1 ? 'text-info' : ''}`}
+                  onClick={() => setCurrentPathIndex(-1)}
+                >
                   <SquareCheck size={28} />
                   <p className="text-xs">
                     全部
@@ -763,7 +836,16 @@ export default function Deck() {
                   </p>
                 </button>
                 {currentArea[0].optionalTrajs.map((traj) => (
-                  <button className="mdc-btn-toolbar" key={`choice-${traj.index_key}`}>
+                  <button
+                    className={`mdc-btn-toolbar ${
+                      currentPathIndex + 1 === traj.index_key ? 'text-info' : ''
+                    }`}
+                    key={`choice-${traj.index_key}`}
+                    onClick={() => {
+                      setCurrentPathIndex(traj.index_key - 1);
+                      log.info('[Only]', traj.index_key - 1);
+                    }}
+                  >
                     {traj.index_key === 1 ? (
                       <Square1 size={28} />
                     ) : traj.index_key === 2 ? (
@@ -787,20 +869,12 @@ export default function Deck() {
               复位
             </p>
           </button>
-          <button
-            className="mdc-btn-toolbar"
-            onClick={() => {
-              setIsLoading(true);
-              setCheckedAreas([]);
-              clearEditData();
-              preAnnotation(sdkResult as MatchingResultDetail);
-            }}
-          >
+          <button className="mdc-btn-toolbar" onClick={handleResetAll}>
             <Refresh size={28} />
             <p className="text-xs">
-              重新
+              恢复
               <br />
-              标注
+              默认
             </p>
           </button>
         </div>
@@ -830,7 +904,7 @@ export default function Deck() {
           <PreAnnotationCard onChange1={handleToggleMergeUTurns} />
           <AnimationConfigCard />
           <AreaInfoCard
-            fileName={trajName}
+            fileName={dataName}
             gpsCount={rawTraj[0]?.path.length}
             methodCount={sdkResult?.matching_result.length}
             uncheckedCount={mismatchedAreas.length}
@@ -838,7 +912,7 @@ export default function Deck() {
         </div>
         {isAnnotating && currentArea.length > 0 && (
           <div className="flex grow flex-col">
-            <div className="mb-1.5 items-start pl-3 font-semibold text-slate-500">人工核验</div>
+            <div className="mdc-card-header mb-1.5">人工核验</div>
             <div className="card h-full w-full rounded-xl bg-[#2b313f] shadow-inner">
               <div className="card-body mx-3.5 my-3 p-0">
                 <div

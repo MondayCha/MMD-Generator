@@ -1,17 +1,12 @@
-def getBounds(trajs):
-    left: float = 180
-    right: float =  -180 
-    bottom: float = 90
-    top: float =  -90
-    for traj in trajs:
-        for coordinate in traj:
-            if float(coordinate.longitude) < left:
-                left = float(coordinate.longitude)
-            if float(coordinate.longitude) > right:
-                right = float(coordinate.longitude)
-            if float(coordinate.latitude) < bottom:
-                bottom = float(coordinate.latitude)
-            if float(coordinate.latitude) > top:
-                top = float(coordinate.latitude)
-
-    return left, right, bottom, top
+def get_bounds(coordinates):
+    min_lat = min_lon = max_lat = max_lon = None
+    for coordinate in coordinates:
+        if min_lat is None or coordinate.latitude < min_lat:
+            min_lat = coordinate.latitude
+        if min_lon is None or coordinate.longitude < min_lon:
+            min_lon = coordinate.longitude
+        if max_lat is None or coordinate.latitude > max_lat:
+            max_lat = coordinate.latitude
+        if max_lon is None or coordinate.longitude > max_lon:
+            max_lon = coordinate.longitude
+    return [[float(min_lon), float(min_lat)], [float(max_lon), float(max_lat)]]

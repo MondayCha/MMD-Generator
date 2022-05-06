@@ -1,13 +1,14 @@
 import axiosInstance, { AxiosResponseData } from '@services/axios';
 
 export const login = (params: { username: string; password: string }) =>
-  axiosInstance.post<unknown, AxiosResponseData<string>>('login', params);
+  axiosInstance.post<unknown, AxiosResponseData<string>>('auth/login', params);
 
-export const register = (params: { username: string; password: string }) =>
-  axiosInstance.post<unknown, AxiosResponseData<string>>('register', params);
+export const logout = () => axiosInstance.post<unknown, AxiosResponseData<string>>('auth/logout');
 
-export const getUser = () => axiosInstance.get<unknown, AxiosResponseData<string>>('user');
+export const register = (username: string, password: string) =>
+  axiosInstance.post<unknown, AxiosResponseData<string>>('users', {
+    username: username,
+    password: password,
+  });
 
-export const logout = () => {
-  axiosInstance.post<unknown, AxiosResponseData<string>>('logout');
-};
+export const getUserInfo = () => axiosInstance.get<unknown, AxiosResponseData<string>>('user');

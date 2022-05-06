@@ -9,36 +9,52 @@ import os
 from flask import current_app
 
 
-def create_task_folder(task_id):
-    task_id = str(task_id)
-    task_folder = get_task_path(task_id)
+def create_data_group_folder(data_group_id):
+    data_group_id = str(data_group_id)
+    task_folder = get_data_group_path(data_group_id)
     if os.path.exists(task_folder):
         shutil.rmtree(task_folder)
     
-    os.makedirs(get_input_path(task_id))
-    os.makedirs(get_output_path(task_id))
-    os.makedirs(get_trajectory_path(task_id))
-    os.makedirs(get_matching_path(task_id))
+    os.makedirs(get_input_path(data_group_id))
+    os.makedirs(get_output_path(data_group_id))
+    os.makedirs(get_matching_path(data_group_id))
 
 
-def get_task_path(task_id):
-    return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id))
+def get_data_group_path(data_group_id):
+    return os.path.join(current_app.config['UPLOAD_DIR'], 'group', str(data_group_id))
 
 
-def get_input_path(task_id):
-    return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'input')
+def get_input_path(data_group_id):
+    return os.path.join(get_data_group_path(data_group_id), 'input')
 
 
-def get_output_path(task_id):
-    return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'output')
+def get_output_path(data_group_id):
+    return os.path.join(get_data_group_path(data_group_id), 'output')
 
 
-def get_trajectory_path(task_id):
-    return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'trajectory')
+def get_matching_path(data_group_id):
+    return os.path.join(get_data_group_path(data_group_id), 'matching')
 
 
-def get_matching_path(task_id):
-    return os.path.join(current_app.config['UPLOAD_DIR'], str(task_id), 'matching')
+def get_user_modify_path(user_id):
+    return os.path.join(current_app.config['UPLOAD_DIR'], 'modify', str(user_id))
+
+
+def create_user_modify_folder(user_id):
+    user_id = str(user_id)
+    modify_folder = get_user_modify_path(user_id)
+    if os.path.exists(modify_folder):
+        shutil.rmtree(modify_folder)
+
+    input_path = os.path.join(get_user_modify_path(user_id), 'input')
+    output_path = os.path.join(get_user_modify_path(user_id), 'output')
+    matching_path = os.path.join(get_user_modify_path(user_id), 'matching')
+    
+    os.makedirs(input_path)
+    os.makedirs(output_path)
+    os.makedirs(matching_path)
+
+    return input_path, output_path, matching_path
 
 
 def cmd(command):

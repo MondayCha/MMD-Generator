@@ -8,10 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { useThemeContext } from '@components/theme';
 import { Language, Moon, Settings } from 'tabler-icons-react';
 import toast from 'react-hot-toast';
-// Types
-import { MatchingDetail, TaskDetail } from '@services/type';
-import { AxiosRequestConfig } from 'axios';
 import log from '@middleware/logger';
+import type { AxiosRequestConfig } from 'axios';
 
 enum MatchingStatus {
   idling,
@@ -92,20 +90,6 @@ function Home() {
       if (acceptedFiles.length > 0) {
         let formData = new FormData();
         acceptedFiles.map((acceptedFile) => formData.append('files', acceptedFile));
-        api.matching
-          .mapMatching(formData, matchingConfig)
-          .then(({ detail }) => {
-            let { task_id, matching_result } = detail as MatchingDetail;
-            toast(`Matching task ${task_id} is submitted`, { id: 'dropZone' });
-            setSuccessTrajNames(matching_result.success.map((result) => result.name));
-            setFailedTrajNames(matching_result.failed.map((result) => result.name));
-            setMatchingStatus(MatchingStatus.working);
-            setHasSaved(false);
-            navigate(`/home/${task_id}`);
-          })
-          .catch(() => {
-            setMatchingStatus(MatchingStatus.idling);
-          });
       }
     },
   });

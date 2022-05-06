@@ -4,58 +4,52 @@ from datetime import datetime
 from flask import request, g, current_app
 from werkzeug.utils import secure_filename
 from api.models.coordinate import Coordinate, TimestampCoordinate
-from api.models.task import Task
+from api.models.data_group import DataGroup
+from api.models.data import Data
 from api.models.trajectory import MatchingMethod, Trajectory
-from api.utils.matching_sdk import matching_sdk
+from api.utils.matching_sdk import matching_for_group
 from api.utils.os_helper import *
 from api.utils.request_handler import *
+from api.utils.trajectory import get_bounds
 from app import db
 from flasgger import swag_from
+from flask_jwt_extended import jwt_required
 
 from . import bp
 
-def get_bounds(coordinates):
-    min_lat = min_lon = max_lat = max_lon = None
-    for coordinate in coordinates:
-        if min_lat is None or coordinate.latitude < min_lat:
-            min_lat = coordinate.latitude
-        if min_lon is None or coordinate.longitude < min_lon:
-            min_lon = coordinate.longitude
-        if max_lat is None or coordinate.latitude > max_lat:
-            max_lat = coordinate.latitude
-        if max_lon is None or coordinate.longitude > max_lon:
-            max_lon = coordinate.longitude
-    return [[float(min_lon), float(min_lat)], [float(max_lon), float(max_lat)]]
 
-
-@bp.route('/match', methods=['POST'])
+@bp.route('/data_groups', methods=['POST'])
 @swag_from({
     'responses': {
         HTTPStatus.OK.value: {
-            'description': 'map matching',
+            'description': 'Create New Data Group',
         }
     }
 })
-def multiple_matching():
+@jwt_required()
+def data_group():
     """
-    Map matching
+    Create New Data Group
+    - Save datas to file system
+    - Call matching sdk
+    - Create new data group in database
+    ---
     """
     if request.method == 'POST':
-        time_start = datetime.now()
         # get all params and formdata
         req_upload_files = request.files.getlist('files')
 
-        # create task folder
-        new_task = Task()
-        db.session.add(new_task)
+        # create data group folder
+        new_group = DataGroup(osm_path=current_app.config.get('OSM_FILE_PATH'))
+        db.session.add(new_group)
         db.session.commit()
-        g.task = new_task
-        task_hashid = current_app.hashids.encode(new_task.id)
-        create_task_folder(new_task.id)
-        input_path = get_input_path(new_task.id)
-        output_path = get_output_path(new_task.id)
+        g.group = new_group
+        group_hashid = current_app.hashids.encode(new_group.id)
+        create_data_group_folder(new_group.id)
+        input_path = get_input_path(new_group.id)
+        output_path = get_output_path(new_group.id)
 
-        # store files
+        # store input files
         trajectory_list: list[Trajectory] = []
         for file in req_upload_files:
             try:
@@ -69,7 +63,7 @@ def multiple_matching():
 
         # call sdk for map-matching
         time_start_map_matching = datetime.now()
-        matching_sdk_code, matching_sdk_dict = matching_sdk()
+        matching_sdk_code, matching_sdk_dict = matching_for_group(new_group.osm_path)
         if matching_sdk_code == 1:
             return bad_request(status_code=HTTPStatus.INTERNAL_SERVER_ERROR,ret_status_code=RETStatus.SDK_ERR, detail=matching_sdk_dict)
         
@@ -103,7 +97,7 @@ def multiple_matching():
             # |-------------|-----------|------------|
             # | 116.33073   | 39.97568  | 1183524462 |
             # |-------------|-----------|------------|
-            with open(os.path.join(get_input_path(new_task.id), trajectory.name), 'r') as f:
+            with open(os.path.join(get_input_path(new_group.id), trajectory.name), 'r') as f:
                 for line in f:
                     line_list = line.replace('\n', '').strip().split(',')
                     if len(line_list) != 3:
@@ -138,7 +132,7 @@ def multiple_matching():
                 })
 
             multiple_matching_dict = {
-                'task_id': task_hashid,
+                'group_id': group_hashid,
                 'traj_name': trajectory.name,
                 'bounds': get_bounds(trajectory.raw_traj),
                 'raw_traj': [result.to_dict() for result in trajectory.raw_traj],
@@ -146,21 +140,65 @@ def multiple_matching():
             }
 
             # Write Coordinates
-            with open(os.path.join(get_matching_path(new_task.id), '%s.json' % trajectory.name), 'w') as f:
+            with open(os.path.join(get_matching_path(new_group.id), '%s.json' % trajectory.name), 'w') as f:
                 json.dump(multiple_matching_dict, f)
                 f.close()
 
         # Write to disk
         request_detail = {
-            'task_id': task_hashid,
+            'group_id': group_hashid,
             'matching_result': {
                 'success': [ traj.name for traj in success_trajectory_list ],
                 'failed': [ traj.name for traj in failed_trajectory_list ]
             },
         }
 
-        with open(os.path.join(current_app.config['UPLOAD_DIR'], str(new_task.id), '%s.json' % new_task.id), 'w') as f:
+        with open(os.path.join(get_data_group_path(new_group.id), '%s.json' % new_group.id), 'w') as f:
             json.dump(request_detail, f)
             f.close()
 
         return good_request(detail=request_detail)
+
+
+@bp.route('/data_groups/<group_hashid>', methods=['GET'])
+@swag_from({
+    'responses': {
+        HTTPStatus.OK.value: {
+            'description': 'data group',
+        }
+    }
+})
+@jwt_required()
+def get_data_group(group_hashid):
+    """
+    Get Group Brief Information
+    ---
+    parameters:
+      - in: path
+        name: group_hashid
+        required: true
+        description: group hash id
+        schema:  
+            type: string
+    tags:
+      - api
+    """
+    if request.method == 'GET':
+
+        if group_hashid is None:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'missing params')
+
+        try:
+            group_id = current_app.hashids.decode(group_hashid)[0]
+        except Exception:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal task id')
+
+        json_file_path = os.path.join(get_data_group_path(group_id), '%s.json' % group_id)
+        if not os.path.exists(json_file_path):
+            return bad_request(RETStatus.FILE_SYSTEM_ERR, HTTPStatus.NOT_FOUND, 'tarj not found')
+        
+        data_group_info = json.load(open(json_file_path, 'r'))
+        current_app.logger.debug('[api/data_groups/%s]: %s' % (group_hashid, group_id))
+
+        return good_request(data_group_info)
+    return bad_request()
