@@ -1,5 +1,6 @@
 from app import db, bcrypt
 from sqlalchemy.ext.hybrid import hybrid_property
+from api.models.annotation import Annotation
 
 
 class User(db.Model):
@@ -10,7 +11,7 @@ class User(db.Model):
     _password = db.Column(db.String, nullable=False)
     usertype = db.Column(db.Integer, nullable=False) # 0: admin, 1: user
 
-    annotations = db.relationship('Data', backref='annotator')
+    annotations = db.relationship('Annotation', backref='annotator')
 
     @hybrid_property
     def password(self):

@@ -143,6 +143,16 @@ def data_group():
             with open(os.path.join(get_matching_path(new_group.id), '%s.json' % trajectory.name), 'w') as f:
                 json.dump(multiple_matching_dict, f)
                 f.close()
+            
+            # Save to database
+            new_success_data = Data(name=trajectory.name, path=trajectory.path, group_id=new_group.id, status=1)
+            db.session.add(new_success_data)
+            db.session.commit()
+
+        for trajectory in failed_trajectory_list:
+            new_failed_data = Data(name=trajectory.name, path=trajectory.path, group_id=new_group.id, status=0)
+            db.session.add(new_failed_data)
+            db.session.commit()
 
         # Write to disk
         request_detail = {

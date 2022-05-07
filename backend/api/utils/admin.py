@@ -4,6 +4,7 @@ from app import admin, db
 from api.models.user import User
 from api.models.data_group import DataGroup
 from api.models.data import Data
+from api.models.annotation import Annotation
 
 class UserView(ModelView):
     form_columns = ("username", "password", "usertype")
@@ -12,3 +13,4 @@ class UserView(ModelView):
 admin.add_view(UserView(User, db.session))
 admin.add_view(ModelView(DataGroup, db.session))
 admin.add_view(ModelView(Data, db.session))
+admin.add_view(ModelView(Annotation, db.session))

@@ -544,10 +544,14 @@ export default function Deck() {
       }
     });
     log.info('[Merged Traj]', mergedTraj);
-    setCheckedAreas([]);
-    setMatchedPaths([{ id: -1, path: mergedTraj }]);
-    setComment('');
-    toast('提交成功', { id: 'submit-toast' });
+    api.annotate
+      .uploadAnnotation(groupHashid, dataName, JSON.stringify(mergedTraj), comment)
+      .then((res) => {
+        setCheckedAreas([]);
+        setMatchedPaths([{ id: -1, path: mergedTraj }]);
+        setComment('');
+        toast('提交成功', { id: 'submit-toast' });
+      });
   };
 
   const handleTrajModify = () => {

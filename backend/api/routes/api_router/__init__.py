@@ -11,5 +11,6 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 from . import (
     data_group, 
     map_matching, 
-    user
+    user,
+    annotation
 )
