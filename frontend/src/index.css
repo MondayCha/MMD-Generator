@@ -3,20 +3,16 @@
 @tailwind utilities;
 
 @layer components {
-  .image-info-card {
-    @apply mx-auto flex max-w-xs items-center space-x-1.5 rounded-xl bg-white p-1.5 shadow-sm;
-  }
-
   .mdc-btn-toolbar {
-    @apply w-8 flex-col items-center justify-between space-y-1 overflow-visible text-slate-400 transition-colors hover:text-sky-400 focus:outline-none active:brightness-95;
+    @apply w-8 flex-col items-center justify-between space-y-1 overflow-visible text-slate-400 transition-colors hover:text-primary focus:outline-none active:brightness-95;
   }
 
   .mdc-card-header {
-    @apply items-start pl-3 font-semibold text-slate-400;
+    @apply items-start pl-3 font-semibold text-primary dark:text-slate-400;
   }
 
   .mdc-card-body {
-    @apply flex w-full rounded-xl bg-slate-200 p-3 shadow-inner dark:bg-[#2b313f];
+    @apply flex w-full rounded-xl border-2 bg-white p-3  dark:border-0 dark:bg-[#2b313f] dark:shadow-inner;
   }
 }
 

@@ -33,15 +33,19 @@ module.exports = {
   daisyui: {
     themes: [
       {
+        light: {
+          ...require('daisyui/src/colors/themes')['[data-theme=light]'],
+          primary: '#0ea5e9',
+          secondary: '#faa61a',
+          warning: '#fb923c',
+        },
+      },
+      {
         dark: {
           ...require('daisyui/src/colors/themes')['[data-theme=dark]'],
           primary: '#0284c7',
           secondary: '#faa61a',
-        },
-        light: {
-          ...require('daisyui/src/colors/themes')['[data-theme=light]'],
-          primary: '#0284c7',
-          secondary: '#faa61a',
+          warning: '#ea580c',
         },
       },
     ],

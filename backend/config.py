@@ -16,11 +16,12 @@ class Config(object):
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     UPLOAD_DIR = path.join(basedir, 'media')
 
-
     # Map-Matching SDK
     SDK_ENTRYPONIT_PATH = '~/documents/map-matching/map_matching/build/libs/map_matching-all.jar'
+    SDK_IEEE_PATH = '~/documents/map-matching-6be1206/map_matching/build/libs/map_matching-all.jar'
     GRAPHHOPPER_LOCATION_PATH = '/tmp/graphhopper'
-    OSM_FILE_PATH = '~/documents/data/beijing2.osm.gz'
+    OSM_FILE_PATH = '~/documents/mmd-generator/backend/media/osm/beijing2.osm.gz'
+    IEEE_2015_PATH = '/home/monday/documents/map-matching-dataset/'
     MATCHING_METHODS = ['STMatching', 'SimpleMapMatching', 'GHMapMatching']
 
     # SQLALCHEMY

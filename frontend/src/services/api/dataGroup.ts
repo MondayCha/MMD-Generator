@@ -12,4 +12,4 @@ export const getDataGroup = (groupHashid: string | undefined) =>
  * @returns success and failed list
  */
 export const uploadDataGroup = (formData: FormData, config: AxiosRequestConfig) =>
-  axiosInstance.post<unknown, AxiosResponseData<GroupDetail>>('data_groups', formData, config);
+  axiosInstance.post<unknown, AxiosResponseData<GroupDetail>>('data_group_ieee', formData, config);

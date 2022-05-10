@@ -30,20 +30,15 @@ export default function Login() {
     let formData = new FormData(event.currentTarget);
     let username = formData.get('username') as string;
     let password = formData.get('password') as string;
-    api.user
-      .register(username, password)
-      .then((data) => {
-        toast('注册成功');
-      })
-      .catch((err) => {
-        toast.error(err.message, { id: 'register-failed' });
-      });
+    api.user.register(username, password).then((data) => {
+      toast('注册成功');
+    });
   };
 
   // login
   return (
     <div className="flex h-screen w-screen items-center justify-center space-x-10">
-      <form onSubmit={handleRegister} className="card max-w-xs shadow-lg">
+      <form onSubmit={handleRegister} className="card max-w-xs shadow-lg dark:bg-slate-700">
         <div className="card-body">
           <label>
             Username
@@ -60,7 +55,7 @@ export default function Login() {
           </div>
         </div>
       </form>
-      <form onSubmit={handleLogin} className="card max-w-xs shadow-lg">
+      <form onSubmit={handleLogin} className="card max-w-xs shadow-lg dark:bg-slate-700">
         <div className="card-body">
           <label>
             Username

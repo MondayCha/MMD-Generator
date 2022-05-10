@@ -10,11 +10,11 @@ const AlertContainer = () => {
           className={`${
             t.visible ? 'animate-enter' : 'animate-leave'
           } flex items-center rounded-xl ${
-            t.type === 'error' ? 'bg-orange-700' : 'bg-sky-700'
-          } p-2.5 leading-none text-indigo-50 lg:inline-flex`}
+            t.type === 'error' ? 'bg-warning' : 'bg-primary'
+          } p-2.5 leading-none text-white dark:text-indigo-50 lg:inline-flex`}
           role="alert"
         >
-          <span className="mr-1 ml-1 flex-auto text-left font-semibold">
+          <span className="mr-1 ml-1 flex-auto text-left font-semibold uppercase">
             {resolveValue(t.message, t)}
           </span>
           <span

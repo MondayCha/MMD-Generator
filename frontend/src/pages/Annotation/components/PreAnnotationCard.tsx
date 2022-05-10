@@ -19,7 +19,9 @@ const PreAnnotationCard = (props: PreAnnotationCardProps) => {
         <p className="text-sm">Merge U-turns</p>
         <input
           type="checkbox"
-          className="toggle toggle-xs"
+          className={`toggle toggle-xs border-slate-300 ${
+            autoMergeCircle ? 'bg-primary dark:bg-slate-400' : 'bg-slate-300 dark:bg-slate-600'
+          } dark:border-slate-600`}
           checked={autoMergeCircle}
           onChange={onChange1}
         />

@@ -83,7 +83,7 @@ def register():
             return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'missing params')
         user = User.query.filter_by(username=username).first()
         if user is not None:
-            return bad_request(RETStatus.AUTH_ERR, HTTPStatus.NOT_FOUND, 'user already exist')
+            return bad_request(RETStatus.AUTH_ERR, HTTPStatus.BAD_REQUEST, 'user already exist')
         user = User(username=username, password=password, usertype=1)
         db.session.add(user)
         db.session.commit()

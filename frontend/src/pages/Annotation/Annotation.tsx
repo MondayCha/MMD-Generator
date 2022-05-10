@@ -335,7 +335,7 @@ export default function Deck() {
         widthUnits: 'pixels',
         getWidth: 6,
         getPath: (d) => d.path.map((p) => p.coordinates),
-        getColor: [250, 166, 26, 50],
+        getColor: themeMode === 'dark' ? [250, 166, 26, 50] : [250, 166, 26, 150],
         // autoHighlight: true,
         // highlightColor: [250, 166, 26, 255],
         visible: showRawTraj,
@@ -703,14 +703,14 @@ export default function Deck() {
   };
 
   return (
-    <div className="absolute h-full w-full dark:bg-[#1e2433]">
+    <div className="absolute h-full w-full bg-white dark:bg-[#1e2433]">
       <div className="absolute left-14 right-0 flex h-8 flex-row items-center justify-start">
-        <p className="select-none text-center font-black tracking-tight text-slate-600">
+        <p className="select-none text-center font-black tracking-tight text-primary dark:text-slate-600">
           Map-Matching Dataset Generator
         </p>
       </div>
       <div
-        className="absolute top-8 left-14 bottom-8 right-52 overflow-hidden rounded-2xl shadow-inner lg:bottom-6"
+        className="absolute top-8 left-14 bottom-8 right-52 overflow-hidden rounded-2xl border-2  dark:border-0 dark:shadow-inner lg:bottom-6"
         ref={mapContainerRef}
       >
         <div
@@ -776,7 +776,7 @@ export default function Deck() {
               <>
                 <button
                   className={`mdc-btn-toolbar ${
-                    editState === EditState.DRAW_POLYGON ? 'text-info' : ''
+                    editState === EditState.DRAW_POLYGON ? 'text-primary' : ''
                   }`}
                   onClick={() => {
                     if (editState === EditState.MODIFY_POINT) {
@@ -797,7 +797,7 @@ export default function Deck() {
                 </button>
                 <button
                   className={`mdc-btn-toolbar ${
-                    editState === EditState.MODIFY_POINT ? 'text-info' : ''
+                    editState === EditState.MODIFY_POINT ? 'text-primary' : ''
                   }`}
                   onClick={handleTrajModify}
                 >
@@ -829,7 +829,7 @@ export default function Deck() {
             {!showRawTraj && isAnnotating && currentArea.length > 0 && (
               <>
                 <button
-                  className={`mdc-btn-toolbar ${currentPathIndex === -1 ? 'text-info' : ''}`}
+                  className={`mdc-btn-toolbar ${currentPathIndex === -1 ? 'text-primary' : ''}`}
                   onClick={() => setCurrentPathIndex(-1)}
                 >
                   <SquareCheck size={28} />
@@ -842,7 +842,7 @@ export default function Deck() {
                 {currentArea[0].optionalTrajs.map((traj) => (
                   <button
                     className={`mdc-btn-toolbar ${
-                      currentPathIndex + 1 === traj.index_key ? 'text-info' : ''
+                      currentPathIndex + 1 === traj.index_key ? 'text-primary' : ''
                     }`}
                     key={`choice-${traj.index_key}`}
                     onClick={() => {
@@ -917,46 +917,44 @@ export default function Deck() {
         {isAnnotating && currentArea.length > 0 && (
           <div className="flex grow flex-col">
             <div className="mdc-card-header mb-1.5">人工核验</div>
-            <div className="card h-full w-full rounded-xl bg-[#2b313f] shadow-inner">
-              <div className="card-body mx-3.5 my-3 p-0">
-                <div
-                  className={`card-actions grid h-full grid-cols-1 ${
-                    currentArea[0].optionalTrajs.length === 2 ? 'grid-rows-2' : 'grid-rows-3'
-                  } gap-3`}
-                >
-                  {currentArea[0].optionalTrajs.map((traj) => {
-                    return (
-                      <button
-                        className="flex h-full flex-row items-center justify-center rounded-lg pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90"
-                        onClick={() => handleArea(traj.name)}
-                        key={traj.name}
-                        style={{
-                          backgroundColor: `#${traj.color
-                            .map((c) => {
-                              const hex = c.toString(16);
-                              return hex.length === 1 ? '0' + hex : hex;
-                            })
-                            .join('')}`,
-                        }}
-                      >
-                        <div className="flex h-full w-12 items-center justify-center bg-gray-700 bg-opacity-20 ">
-                          <p className=" text-4xl font-extrabold italic">
-                            {traj.index_key.toString()}
-                          </p>
-                        </div>
-                        {/* <p className="break-all text-left text-xs opacity-80">
+            <div className="mdc-card-body h-full">
+              <div
+                className={`grid h-full w-full grid-cols-1 ${
+                  currentArea[0].optionalTrajs.length === 2 ? 'grid-rows-2' : 'grid-rows-3'
+                } gap-3`}
+              >
+                {currentArea[0].optionalTrajs.map((traj) => {
+                  return (
+                    <button
+                      className="flex h-full flex-row items-center justify-between overflow-hidden rounded-lg text-white bg-blend-darken brightness-110 transition duration-200 hover:brightness-105 active:brightness-100 dark:brightness-100 dark:hover:brightness-95 dark:active:brightness-90"
+                      onClick={() => handleArea(traj.name)}
+                      key={traj.name}
+                      style={{
+                        backgroundColor: `#${traj.color
+                          .map((c) => {
+                            const hex = c.toString(16);
+                            return hex.length === 1 ? '0' + hex : hex;
+                          })
+                          .join('')}`,
+                      }}
+                    >
+                      <div className="flex h-full w-12 items-center justify-center bg-gray-700 bg-opacity-20 ">
+                        <p className=" text-4xl font-extrabold italic">
+                          {traj.index_key.toString()}
+                        </p>
+                      </div>
+                      {/* <p className="break-all text-left text-xs opacity-80">
                           {traj.owners.length} methods (
                           {traj.owners.map((owner) => owner.owner_type).join(', ')}) choice this
                           plan.
                         </p> */}
-                        <p className="text-4xl font-extrabold italic opacity-50">
-                          {((traj.owners.length / 3) * 100).toFixed(0)}
-                          <span className="text-3xl">%</span>
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
+                      <p className="grow text-4xl font-extrabold italic opacity-50">
+                        {((traj.owners.length / 3) * 100).toFixed(0)}
+                        <span className="text-3xl">%</span>
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -966,30 +964,28 @@ export default function Deck() {
             <div className="mdc-card-header mb-1.5">
               {mismatchedAreas.length === 0 ? '结果提交' : '开始标注'}
             </div>
-            <div className="card h-full w-full rounded-xl bg-slate-200 shadow-inner dark:bg-[#2b313f]">
-              <div className="card-body mx-3.5 my-3 flex-col p-0">
-                <textarea
-                  className="textarea flex w-full grow resize-none bg-slate-100 shadow-inner dark:bg-[#1e2433]"
-                  value={comment}
-                  placeholder="反馈遇到的问题"
-                  onChange={(e) => setComment(e.target.value)}
-                />
-                {mismatchedAreas.length === 0 ? (
-                  <button
-                    className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-sky-600 pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
-                    onClick={handleSubmit}
-                  >
-                    <p className="text-3xl font-extrabold italic opacity-70">Submit</p>
-                  </button>
-                ) : (
-                  <button
-                    className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-sky-600 pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
-                    onClick={showNextUncheckedArea}
-                  >
-                    <p className="text-3xl font-extrabold italic opacity-70">Start</p>
-                  </button>
-                )}
-              </div>
+            <div className="mdc-card-body h-full flex-col space-y-3">
+              <textarea
+                className="textarea flex w-full grow resize-none border-2 border-gray-200 bg-white dark:border-0 dark:bg-[#1e2433] dark:shadow-inner"
+                value={comment}
+                placeholder="反馈遇到的问题"
+                onChange={(e) => setComment(e.target.value)}
+              />
+              {mismatchedAreas.length === 0 ? (
+                <button
+                  className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-primary pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
+                  onClick={handleSubmit}
+                >
+                  <p className="text-3xl font-extrabold italic dark:opacity-70">Submit</p>
+                </button>
+              ) : (
+                <button
+                  className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-primary pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
+                  onClick={showNextUncheckedArea}
+                >
+                  <p className="text-3xl font-extrabold italic dark:opacity-70">Start</p>
+                </button>
+              )}
             </div>
           </div>
         )}

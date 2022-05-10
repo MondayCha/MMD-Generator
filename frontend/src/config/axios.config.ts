@@ -6,7 +6,7 @@
 let hostUrl: string;
 switch (process.env.NODE_ENV) {
   case 'development':
-    hostUrl = 'http://localhost:8000';
+    hostUrl = 'http://localhost:8000/';
     break;
   case 'production':
     hostUrl = 'http://localhost:8000';
