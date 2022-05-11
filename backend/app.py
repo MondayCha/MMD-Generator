@@ -5,7 +5,7 @@ Description: Flask App Entrypoint
 '''
 import logging
 from flask import Flask
-from config import Config
+from config import Config, SWAGGER_TEMPLATE
 from flask_cors import CORS
 from flasgger import Swagger
 from flask_sqlalchemy import SQLAlchemy
@@ -21,6 +21,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
 bcrypt = Bcrypt()
+hashids = Hashids(salt=Config.SECRET_KEY, min_length=8)
 jwt = JWTManager()
 admin = Admin()
 
@@ -28,7 +29,6 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     app.logger.setLevel(logging.DEBUG if app.debug else logging.INFO)
-    app.hashids = Hashids(salt=Config.SECRET_KEY, min_length=8)
 
     # set up instance
     db.init_app(app)
@@ -38,7 +38,7 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     admin.init_app(app)
     import api.utils.admin
-    swagger = Swagger(app)
+    swagger = Swagger(app, template=SWAGGER_TEMPLATE)
     CORS(app, supports_credentials=True)
 
     # routes

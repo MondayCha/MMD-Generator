@@ -9,6 +9,24 @@ from datetime import timedelta
 basedir = path.abspath(path.dirname(__file__))
 load_dotenv(path.join(basedir, '.env'))
 
+SWAGGER_TEMPLATE = {
+    'components': {
+        'securitySchemes': {
+            'auth': {
+                'type': 'apiKey',
+                'in': 'header',
+                'name': 'Authorization',
+                'description': 'A jwt token formatted in `bearer xxxxxxxxxxxxxxxxxxxxxx`'
+            }
+        },
+    },
+    'security': [
+        {
+            'auth': []
+        }
+    ]
+}
+
 
 class Config(object):
     SECRET_KEY = environ.get('SECRET_KEY') or 'map-matching-dataset-generator'
@@ -36,6 +54,7 @@ class Config(object):
         'title': 'Map-Matching Dataset Generator',
         'version': '0.1.0',
         'openapi': '3.0.3',
+        'termsOfService': '',
         'specs': [
             {
                 'endpoint': 'apispec',

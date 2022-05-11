@@ -20,7 +20,11 @@ export default function Login() {
         toast.error('用户名或密码错误', { id: 'login-failed' });
       } else {
         data.access_token && tokenManager.setToken(data.access_token);
-        navigate(from, { replace: true });
+        if (from === '/login') {
+          navigate('/', { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
       }
     });
   };
@@ -38,7 +42,10 @@ export default function Login() {
   // login
   return (
     <div className="flex h-screen w-screen items-center justify-center space-x-10">
-      <form onSubmit={handleRegister} className="card max-w-xs shadow-lg dark:bg-slate-700">
+      <form
+        onSubmit={handleRegister}
+        className="card max-w-xs border-2 dark:border-0 dark:bg-slate-700 dark:shadow-lg"
+      >
         <div className="card-body">
           <label>
             Username
@@ -55,7 +62,10 @@ export default function Login() {
           </div>
         </div>
       </form>
-      <form onSubmit={handleLogin} className="card max-w-xs shadow-lg dark:bg-slate-700">
+      <form
+        onSubmit={handleLogin}
+        className="card max-w-xs border-2 dark:border-0 dark:bg-slate-700 dark:shadow-lg"
+      >
         <div className="card-body">
           <label>
             Username

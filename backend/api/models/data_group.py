@@ -1,4 +1,5 @@
-from app import db
+from app import db, hashids
+from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime
 from api.models.user import User
 
@@ -13,10 +14,12 @@ class DataGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     created = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
-
     osm_path = db.Column(db.String, nullable=False)
-
     datas = db.relationship('Data', backref='group', lazy="dynamic", cascade='all, delete-orphan', passive_deletes=True)
 
+    @hybrid_property
+    def hashid(self):
+        return hashids.encode(self.id)
+
     def __repr__(self):
-        return '<DataGroup {}>'.format(self.id)
+        return '<DataGroup {} {}>'.format(self.id, hashids.encode(self.id))

@@ -17,6 +17,7 @@ import log from '@middleware/logger';
 // Types
 import type { GroupDetail } from '@services/type';
 import type { AxiosRequestConfig } from 'axios';
+import NavigationBar from '@/components/basic/NavigationBar';
 
 enum MatchingStatus {
   idling,
@@ -31,8 +32,6 @@ const Upload = () => {
   const { t } = useTranslation();
   const { groupHashid } = useParams();
   const navigate = useNavigate();
-  const { switchLocaleMode } = useFlooksStore();
-  const { toggleTheme } = useThemeContext();
   // home page state
   const [matchingStatus, setMatchingStatus] = useState<MatchingStatus>(MatchingStatus.idling);
   const [task, setTask] = useState<string>('');
@@ -125,25 +124,8 @@ const Upload = () => {
 
   return (
     <div className="max-w-screen min-h-screen bg-slate-50 dark:bg-slate-800">
-      <div className="navbar mb-6 border-b-2 bg-white px-6 dark:border-0 dark:bg-slate-700 dark:shadow lg:px-36">
-        <div className="navbar-start">
-          <a className="text-2xl font-extrabold normal-case text-black dark:text-white">
-            {t('app.name')}
-          </a>
-        </div>
-        <div className="navbar-end">
-          <button
-            className="btn btn-ghost btn-circle dark:text-gray-400"
-            onClick={switchLocaleMode}
-          >
-            <Language />
-          </button>
-          <button className="btn btn-ghost btn-circle dark:text-gray-400" onClick={toggleTheme}>
-            <Moon />
-          </button>
-        </div>
-      </div>
-      <div className="m-0 px-6 pt-2 pb-6 lg:px-36">
+      <NavigationBar />
+      <div className="m-0 px-6 pt-6 pb-6 lg:px-36">
         <div className="grid grid-flow-row grid-cols-4 gap-6">
           <div className="card col-span-4 h-64 border-2 bg-white dark:border-0 dark:bg-slate-700 dark:shadow-md">
             {matchingStatus === MatchingStatus.idling ||
@@ -197,44 +179,48 @@ const Upload = () => {
           </div>
 
           {matchingStatus === MatchingStatus.working &&
-            successTrajNames.map((successTrajName) => (
-              <div
-                key={successTrajName}
-                className="card border-2 bg-white dark:border-0 dark:bg-slate-700 dark:shadow-md"
-              >
-                <div className="card-body m-0 p-4">
-                  <div className="card-actions justify-between">
-                    <h3 className="text-lg font-semibold dark:text-white">{successTrajName}</h3>
-                    <Link
-                      to={`/annotations/${task}/${successTrajName}`}
-                      target="_blank"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <button className="btn btn-primary btn-sm">{t('button.preview')}</button>
-                    </Link>
+            successTrajNames
+              .sort((a, b) => a.localeCompare(b))
+              .map((successTrajName) => (
+                <div
+                  key={successTrajName}
+                  className="card border-2 bg-white dark:border-0 dark:bg-slate-700 dark:shadow-md"
+                >
+                  <div className="card-body m-0 p-4">
+                    <div className="card-actions justify-between">
+                      <h3 className="text-lg font-semibold dark:text-white">{successTrajName}</h3>
+                      <Link
+                        to={`/annotations/${task}/${successTrajName}`}
+                        target="_blank"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <button className="btn btn-primary btn-sm">{t('button.preview')}</button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           {matchingStatus === MatchingStatus.working &&
-            failedTrajNames.map((failedTrajName) => (
-              <div
-                key={failedTrajName}
-                className="card border-2 bg-base-100 dark:border-0 dark:bg-slate-700 dark:shadow-md"
-              >
-                <div className="card-body m-0 p-4">
-                  <div className="card-actions justify-between">
-                    <h3 className="text-lg font-semibold dark:text-white">{failedTrajName}</h3>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => toast(`${failedTrajName}`, { id: 'failed' })}
-                    >
-                      {t('button.failed')}
-                    </button>
+            failedTrajNames
+              .sort((a, b) => a.localeCompare(b))
+              .map((failedTrajName) => (
+                <div
+                  key={failedTrajName}
+                  className="card border-2 bg-base-100 dark:border-0 dark:bg-slate-700 dark:shadow-md"
+                >
+                  <div className="card-body m-0 p-4">
+                    <div className="card-actions justify-between">
+                      <h3 className="text-lg font-semibold dark:text-white">{failedTrajName}</h3>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => toast(`${failedTrajName}`, { id: 'failed' })}
+                      >
+                        {t('button.failed')}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
         </div>
       </div>
     </div>

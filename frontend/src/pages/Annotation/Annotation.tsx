@@ -4,7 +4,7 @@
  * @Description: Map-Matching result annotation
  */
 import { useState, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 // Project
 import { api } from '@services/api';
 import log from '@middleware/logger';
@@ -35,7 +35,7 @@ import {
 import { debounce } from 'lodash';
 import { PreprocessAreas, pre_annotate } from '@wasm/pre-annotation/package';
 // Types
-import type { CoordinateDetail, MatchingResultDetail } from '@services/type';
+import type { CoordinateDetail, MatchingResultDetail, TaskDetail } from '@services/type';
 import type { MismatchedArea, BoundPolygon } from '@utils/trajectory';
 import type { ViewStateProps } from '@deck.gl/core/lib/deck';
 import type { Position2D } from 'deck.gl';
@@ -61,6 +61,12 @@ interface TPathData {
   name: string | number;
   path: WayPoint[];
   time: { start: number; end: number };
+}
+
+interface MethodAnalysis {
+  mismatched_area_count: number;
+  mismatched_point_count: number;
+  total_point_count: number;
 }
 
 /**
@@ -142,6 +148,7 @@ const enum EditState {
 export default function Deck() {
   const { groupHashid, dataName } = useParams();
   const { themeMode } = useThemeContext();
+  const navigate = useNavigate();
 
   // Map State
   const [initViewState, setInitViewState] = useState<ViewStateProps>(INITIAL_VIEW_STATE);
@@ -221,6 +228,7 @@ export default function Deck() {
 
   // Right Panel
   const [comment, setComment] = useState<string>('');
+  const [showModal, setShowModal] = useState(false);
   const [autoMergeCircle, setAutoMergeCircle] = useLocalStorage<boolean>(
     appConfig.local_storage.pre_annotation.auto_merge_circle,
     true
@@ -524,6 +532,50 @@ export default function Deck() {
   );
 
   const handleSubmit = () => {
+    // analysis
+    let analysis = new Map<string, MethodAnalysis>();
+    sdkResult?.matching_result.forEach((result) => {
+      analysis.set(result.method_name, {
+        mismatched_area_count: 0,
+        mismatched_point_count: 0,
+        total_point_count: result.trajectory.length,
+      });
+    });
+    checkedAreas.forEach((area) => {
+      const index = area.selectedTrajIndex;
+      for (let i = 0; i < area.optionalTrajs.length; i += 1) {
+        if (i !== index) {
+          area.optionalTrajs[i].owners.forEach((owner) => {
+            const prev = analysis.get(owner.owner_type);
+            if (prev) {
+              analysis.set(owner.owner_type, {
+                mismatched_area_count: prev.mismatched_area_count + 1,
+                mismatched_point_count:
+                  prev.mismatched_point_count + owner.end_index - owner.start_index,
+                total_point_count: prev.total_point_count,
+              });
+            }
+          });
+        }
+      }
+    });
+    allAreas?.prematched_areas.forEach((area) => {
+      const subTraj = area.sub_traj;
+      subTraj.owners.forEach((owner) => {
+        if (owner.has_error) {
+          const prev = analysis.get(owner.owner_type);
+          if (prev) {
+            analysis.set(owner.owner_type, {
+              mismatched_area_count: prev.mismatched_area_count + 1,
+              mismatched_point_count:
+                prev.mismatched_point_count + owner.end_index - owner.start_index,
+              total_point_count: prev.total_point_count,
+            });
+          }
+        }
+      });
+    });
+    // merge traj
     let mergedTraj: Position2D[] = [];
     const mergedAreas: PathData[] = [
       ...matchedPaths,
@@ -545,12 +597,18 @@ export default function Deck() {
     });
     log.info('[Merged Traj]', mergedTraj);
     api.annotate
-      .uploadAnnotation(groupHashid, dataName, JSON.stringify(mergedTraj), comment)
+      .uploadAnnotation(
+        groupHashid,
+        dataName,
+        JSON.stringify(mergedTraj),
+        JSON.stringify(Array.from(analysis.entries())),
+        comment
+      )
       .then((res) => {
         setCheckedAreas([]);
         setMatchedPaths([{ id: -1, path: mergedTraj }]);
         setComment('');
-        toast('提交成功', { id: 'submit-toast' });
+        setShowModal(true);
       });
   };
 
@@ -741,7 +799,7 @@ export default function Deck() {
       </div>
       <div className="absolute top-8 left-0 bottom-8 flex w-14 flex-col items-center justify-between px-3 lg:bottom-6">
         <div className="flex flex-col items-center justify-center">
-          <div className="mx-3 flex flex-col border-b-2 border-slate-600 border-opacity-50  py-6">
+          <div className="mx-3 flex flex-col border-b-2 border-slate-600 border-opacity-25  py-6">
             <button
               className="mdc-btn-toolbar"
               onClick={() => {
@@ -864,7 +922,7 @@ export default function Deck() {
             )}
           </div>
         </div>
-        <div className="mx-3 flex flex-col space-y-6 border-t-2 border-slate-600  border-opacity-50 py-6">
+        <div className="mx-3 flex flex-col space-y-6 border-t-2 border-slate-600  border-opacity-25 py-6">
           <button className="mdc-btn-toolbar" onClick={() => setViewState(initViewState)}>
             <ArrowsMaximize size={28} />
             <p className="text-xs">
@@ -888,7 +946,7 @@ export default function Deck() {
         <a
           href="https://carto.com/about-carto/"
           target="_blank"
-          rel="noopener"
+          rel="noreferrer"
           className=" text-gray-500"
         >
           CARTO
@@ -898,6 +956,7 @@ export default function Deck() {
           href="http://www.openstreetmap.org/about/"
           target="_blank"
           className="mr-1 text-gray-500"
+          rel="noreferrer"
         >
           OpenStreetMap
         </a>
@@ -990,6 +1049,48 @@ export default function Deck() {
           </div>
         )}
       </div>
+      {showModal && (
+        <>
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden outline-none focus:outline-none ">
+            <div className="relative my-6 mx-auto w-auto max-w-3xl">
+              <div className="mdc-card-body flex flex-col items-stretch justify-between space-y-3 p-5">
+                <h3 className="mdc-card-header ml-0 pl-0 text-xl">提交成功</h3>
+                <p>
+                  已经完成了对数据集 {groupHashid} 数据 {dataName} 的标注
+                </p>
+                <div className="flex flex-row items-center justify-end space-x-2">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      setShowModal(false);
+                      handleResetAll();
+                    }}
+                  >
+                    Retry
+                  </button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setShowModal(false);
+                      api.task.getTasks(1, 1).then(({ detail }) => {
+                        const tasks = detail as TaskDetail[];
+                        if (tasks.length > 0) {
+                          navigate(`/annotations/${tasks[0].hashid}/${tasks[0].name}`);
+                        } else {
+                          toast('No more tasks');
+                        }
+                      });
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="fixed inset-0 z-40 bg-black opacity-10"></div>
+        </>
+      )}
     </div>
   );
 }

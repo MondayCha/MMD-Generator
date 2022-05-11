@@ -12,12 +12,11 @@ from flask import current_app
 def create_data_group_folder(data_group_id):
     data_group_id = str(data_group_id)
     task_folder = get_data_group_path(data_group_id)
-    if os.path.exists(task_folder):
-        shutil.rmtree(task_folder)
-    
-    os.makedirs(get_input_path(data_group_id))
-    os.makedirs(get_output_path(data_group_id))
-    os.makedirs(get_matching_path(data_group_id))
+    if not os.path.exists(task_folder):
+    #     shutil.rmtree(task_folder)
+        os.makedirs(get_input_path(data_group_id), exist_ok=True)
+        os.makedirs(get_output_path(data_group_id), exist_ok=True)
+        os.makedirs(get_matching_path(data_group_id), exist_ok=True)
 
 
 def get_data_group_path(data_group_id):

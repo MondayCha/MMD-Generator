@@ -7,7 +7,7 @@ from flask import request, current_app
 from api.models.coordinate import Coordinate, TimestampCoordinate
 from api.models.data_group import DataGroup
 from api.utils.matching_sdk import matching_for_data
-from app import db
+from app import db, hashids
 from flasgger import swag_from
 from flask_jwt_extended import jwt_required, current_user
 
@@ -41,7 +41,7 @@ def get_data_map_matching(group_hashid, data_name):
             return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'missing params')
 
         try:
-            group_id = current_app.hashids.decode(group_hashid)[0]
+            group_id = hashids.decode(group_hashid)[0]
         except Exception:
             return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal task id')
 
@@ -77,7 +77,7 @@ def map_matching():
             return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'missing params')
 
         try:
-            group_id = current_app.hashids.decode(req_group_hashid)[0]
+            group_id = hashids.decode(req_group_hashid)[0]
             current_group = DataGroup.query.get(group_id)
             osm_path = current_group.osm_path
             raw_traj = json.loads(req_raw_traj)

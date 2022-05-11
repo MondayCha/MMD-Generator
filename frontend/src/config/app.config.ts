@@ -6,6 +6,7 @@ const appConfig = {
     auth: {
       token: 'config.auth.token',
       from: 'config.auth.from',
+      info: 'config.auth.info',
     },
     uuid: 'config.uuid',
     locale: 'config.locale',

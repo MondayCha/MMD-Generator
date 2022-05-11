@@ -50,3 +50,20 @@ export interface GroupDetail {
     failed: string[];
   };
 }
+
+export interface UserDetail {
+  username: string;
+  usertype: number;
+}
+
+export interface TaskDetail {
+  hashid: string;
+  name: string;
+}
+
+export const enum TaskType {
+  FAILED = 0,
+  SUCCESS,
+  MATCHED,
+  CHECKED,
+}

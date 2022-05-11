@@ -55,8 +55,9 @@ def refresh_expiring_jwts(response):
             access_token = create_access_token(identity=get_jwt_identity())
             data = response.get_json()
             if type(data) is dict:
-                data["access_token"] = access_token
-                response.data = json.dumps(data)
+                if not data["access_token"]:
+                    data["access_token"] = access_token
+                    response.data = json.dumps(data)
         return response
     except (RuntimeError, KeyError):
         # Case where there is not a valid JWT. Just return the original respone
@@ -75,6 +76,8 @@ def register():
     """
     Register
     ---
+    tags:
+      - auth
     """
     if request.method == 'POST':
         username = request.json.get("username", None)
@@ -97,7 +100,6 @@ def get_current_user():
     return good_request(detail={
         "username": current_user.username,
         "usertype": current_user.usertype,
-        "id": current_user.id,
     })
 
 
@@ -113,6 +115,21 @@ def login():
     """
     Login
     ---
+    parameters:
+      - name: body
+        in: body
+        schema:
+            id: LoginBody
+            required:
+            - username
+            - password
+            properties:
+            username:
+                type: string
+            password:
+                type: string
+    tags:
+      - auth
     """
     username = request.json.get("username", None)
     password = request.json.get("password", None)
@@ -144,11 +161,13 @@ def logout():
     """
     Logout
     ---
+    tags:
+      - auth
     """
     response = jsonify({
             'status_code': RETStatus.SUCCESS,
             'detail': "logout successful",
-            "access_token" : "",
+            "access_token" : "bearer token has been removed",
         })
     unset_access_cookies(response)
     return response

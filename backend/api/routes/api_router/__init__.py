@@ -12,5 +12,6 @@ from . import (
     data_group, 
     map_matching, 
     user,
-    annotation
+    annotation,
+    task,
 )

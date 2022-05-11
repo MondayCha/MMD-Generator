@@ -1,18 +1,26 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import useFlooksStore from '@hooks/useFlooksStore';
+import { Link } from 'react-router-dom';
 import { api } from '@services/api';
+import toast from 'react-hot-toast';
 import log from '@middleware/logger';
+import { useNavigate } from 'react-router-dom';
 import NavigationBar from '@/components/basic/NavigationBar';
 import { TaskDetail } from '@/services/type';
 
+enum MatchingStatus {
+  idling,
+  uploading,
+  waiting,
+  downloading,
+  working,
+}
+
 function Home() {
-  // hooks (theme, i18n)
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<TaskDetail[]>([]);
 
   useEffect(() => {
-    api.task.getTasks(1).then(({ detail }) => {
+    api.task.getTasks(2).then(({ detail }) => {
       const tasks = detail as TaskDetail[];
       setTasks(tasks);
     });
@@ -36,7 +44,7 @@ function Home() {
                     className="btn btn-primary btn-sm"
                     onClick={() => navigate(`/annotations/${task.hashid}/${task.name}`)}
                   >
-                    标注
+                    检查
                   </button>
                 </div>
               </div>

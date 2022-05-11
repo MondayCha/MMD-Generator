@@ -15,8 +15,10 @@ import { RouteObject } from 'react-router-dom';
  */
 const Home = lazy(() => import('@pages/Home'));
 const Annotation = lazy(() => import('@/pages/Annotation'));
-const AdminUpload = lazy(() => import('@pages/Admin/Upload'));
 const Login = lazy(() => import('@pages/Auth/Login'));
+const Review = lazy(() => import('@pages/Admin/Review'));
+const Upload = lazy(() => import('@pages/Admin/Upload'));
+const Output = lazy(() => import('@pages/Admin/Output'));
 
 export const routerConfig: RouteObject[] = [
   {
@@ -32,12 +34,26 @@ export const routerConfig: RouteObject[] = [
     element: <Annotation />,
   },
   {
-    path: '/admin/upload',
-    element: <AdminUpload />,
-  },
-  {
-    path: '/admin/upload/:groupHashid',
-    element: <AdminUpload />,
+    path: '/admin',
+    children: [
+      {
+        path: '/admin/review',
+        element: <Review />,
+      },
+      {
+        path: '/admin/upload',
+        element: <Upload />,
+      },
+
+      {
+        path: '/admin/upload/:groupHashid',
+        element: <Upload />,
+      },
+      {
+        path: '/admin/output',
+        element: <Output />,
+      },
+    ],
   },
 ];
 

@@ -29,7 +29,7 @@ class RETStatus(IntEnum):
 def good_request(detail=None):
     data = {
             'status_code': RETStatus.SUCCESS,
-            'detail': detail or RETStatus.SUCCESS.description,
+            'detail': detail if detail is not None else RETStatus.SUCCESS.description,
         }
     response = jsonify(data)
     response.status_code = HTTPStatus.OK

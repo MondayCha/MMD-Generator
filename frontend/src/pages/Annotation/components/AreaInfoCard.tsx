@@ -1,6 +1,3 @@
-import appConfig from '@/config/app.config';
-import useLocalStorage from '@/hooks/useLocalStorage';
-
 interface AreaInfoCardProps {
   fileName: string | undefined;
   gpsCount: number | undefined;
