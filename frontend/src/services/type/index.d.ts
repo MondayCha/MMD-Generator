@@ -67,3 +67,47 @@ export const enum TaskType {
   MATCHED,
   CHECKED,
 }
+
+export const enum AnnotationType {
+  UNREVIEW = -1,
+  FAILED,
+  SELECTED,
+}
+
+export interface AnnotationDetail {
+  hashid: string;
+  data_name: string;
+  group_hashid: string;
+  status: number;
+}
+
+export interface MethodMetricDetail {
+  mismatched_area_count: number;
+  mismatched_point_count: number;
+  total_point_count: number;
+}
+
+export type MethodAnalysisDetail = [string, MethodMetricDetail];
+
+export interface ReviewDetail {
+  analysis: MethodAnalysisDetail[];
+  comment: string | null;
+  data_name: string;
+  group_hashid: string;
+  raw_traj: TCoordinateDetail[];
+  trajectory: CoordinateDetail[];
+  bounds: Bounds;
+  annotator: string;
+}
+
+export interface DatasetDetail {
+  hashid: string;
+  name: string;
+  size: {
+    failed: number;
+    processed: number;
+    annotated: number;
+    checked: number;
+    total: number;
+  };
+}

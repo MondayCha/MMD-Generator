@@ -36,12 +36,16 @@ def upload_annotation():
     """
     Upload annotation
     ---
+    tags:
+      - annotation
     """
     if request.method == 'POST':
         req_group_hashid = request.form.get('group_hashid')
         req_data_name = request.form.get('data_name')
         req_data_analysis = request.form.get('analysis')
         req_data_annotation = request.form.get('annotation')
+        req_raw_traj = request.form.get('raw_traj')
+        req_bounds = request.form.get('bounds')
         req_comment = request.form.get('comment')
 
         if req_group_hashid is None or req_data_name is None:
@@ -55,13 +59,21 @@ def upload_annotation():
                 return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal group id')
             data_annotation = json.loads(req_data_annotation)
             data_analysis = json.loads(req_data_analysis)
+            data_raw_traj = json.loads(req_raw_traj)
+            data_bounds = json.loads(req_bounds)
             data_annotation_path = get_matching_path(group_id)
             input_traj_name = 'annotation-%s-%s.json' % (current_user.id, req_data_name)
             data_path = os.path.join(data_annotation_path, input_traj_name)
             with open(data_path, 'w') as f:
                 json.dump({
+                    'group_hashid': req_group_hashid,
+                    'data_name': req_data_name,
                     'trajectory': data_annotation,
+                    'raw_traj': data_raw_traj,
                     'analysis': data_analysis,
+                    'bounds': data_bounds,
+                    'comment': req_comment,
+                    'annotator': current_user.username,
                 }, f)
                 f.close()
         except Exception:
@@ -102,4 +114,116 @@ def upload_annotation():
 
         # Write Coordinates
         return good_request()
+    return bad_request()
+
+
+@bp.route('/annotations', methods=['GET'])
+@swag_from({
+    'responses': {
+        HTTPStatus.OK.value: {
+            'description': 'get annotations',
+        }
+    }
+})
+@jwt_required()
+def get_annotations():
+    """
+    Get annotations
+    ---
+    tags:
+      - annotation
+    """
+    if request.method == 'GET':
+        query_type = request.args.get('type') or -1  # -1: unreviewd, 0: failed 1: selected
+        try:
+            annotations = Annotation.query.filter_by(status=query_type).all()
+            if annotations:
+                return good_request([annotation.to_dict() for annotation in annotations])
+            return good_request(detail=[])
+        except Exception:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal task id')
+    return bad_request()
+
+
+@bp.route('/annotations/<hashid>', methods=['GET'])
+@swag_from({
+    'responses': {
+        HTTPStatus.OK.value: {
+            'description': 'get annotation',
+        }
+    }
+})
+@jwt_required()
+def get_annotation(hashid):
+    """
+    Get annotation
+    ---
+    tags:
+      - annotation
+    """
+    if request.method == 'GET':
+        if hashid is None:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'missing params')
+
+        try:
+            annotation_id = hashids.decode(hashid)[0]
+        except Exception:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal annotation id')
+
+        try:
+            annotation = Annotation.query.filter_by(id=annotation_id).first()
+            if annotation:
+                json_file_path = annotation.path
+                if not os.path.exists(json_file_path):
+                    return bad_request(RETStatus.FILE_SYSTEM_ERR, HTTPStatus.NOT_FOUND, 'annotation for data not found')
+                detail = json.load(open(json_file_path, 'r'))
+                return good_request(detail)
+            return good_request(detail=[])
+        except Exception:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal task id')
+    return bad_request()
+
+
+@bp.route('/annotations/<hashid>', methods=['PUT'])
+@swag_from({
+    'responses': {
+        HTTPStatus.OK.value: {
+            'description': 'modify annotation',
+        }
+    }
+})
+@jwt_required()
+def modify_annotation(hashid):
+    """
+    Modify annotation
+    ---
+    tags:
+      - annotation
+    """
+    if request.method == 'PUT':
+        req_status = request.form.get('status') or -1  # -1: unreviewd, 0: failed 1: selected
+        req_review_comment = request.form.get('review_comment')
+        if hashid is None:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'missing params')
+
+        try:
+            annotation_id = hashids.decode(hashid)[0]
+        except Exception:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal annotation id')
+
+        try:
+            annotation = Annotation.query.filter_by(id=annotation_id).first()
+            annotation.status = req_status
+            if req_review_comment is not None:
+                annotation.review_comment = req_review_comment
+            db.session.add(annotation)
+            db.session.commit()
+            if int(req_status) == 1:
+                current_data = annotation.data
+                current_data.status = 3
+                db.session.add(current_data)
+                db.session.commit()
+            return good_request()
+        except Exception:
+            return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal task id')
     return bad_request()

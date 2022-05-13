@@ -145,7 +145,7 @@ const enum EditState {
   DONE,
 }
 
-export default function Deck() {
+export default function Annotation() {
   const { groupHashid, dataName } = useParams();
   const { themeMode } = useThemeContext();
   const navigate = useNavigate();
@@ -576,7 +576,7 @@ export default function Deck() {
       });
     });
     // merge traj
-    let mergedTraj: Position2D[] = [];
+    let mergedPath: Position2D[] = [];
     const mergedAreas: PathData[] = [
       ...matchedPaths,
       ...checkedAreas.map((area) => {
@@ -589,24 +589,27 @@ export default function Deck() {
     ].sort((a, b) => a.id - b.id);
     log.info('[Merged Areas]', mergedAreas);
     mergedAreas.forEach((area) => {
-      if (mergedTraj.length === 0) {
-        mergedTraj = area.path;
+      if (mergedPath.length === 0) {
+        mergedPath = area.path;
       } else if (area.path.length > 0) {
-        mergedTraj = [...mergedTraj, ...area.path.slice(1)];
+        mergedPath = [...mergedPath, ...area.path.slice(1)];
       }
     });
-    log.info('[Merged Traj]', mergedTraj);
+    const mergedTraj = mergedPath.map((p) => ({ longitude: p[0], latitude: p[1] }));
+    log.info('[Merged Path]', mergedPath);
     api.annotate
       .uploadAnnotation(
         groupHashid,
         dataName,
         JSON.stringify(mergedTraj),
         JSON.stringify(Array.from(analysis.entries())),
+        JSON.stringify(sdkResult?.raw_traj),
+        JSON.stringify(sdkResult?.bounds),
         comment
       )
       .then((res) => {
         setCheckedAreas([]);
-        setMatchedPaths([{ id: -1, path: mergedTraj }]);
+        setMatchedPaths([{ id: -1, path: mergedPath }]);
         setComment('');
         setShowModal(true);
       });
@@ -1059,6 +1062,15 @@ export default function Deck() {
                   已经完成了对数据集 {groupHashid} 数据 {dataName} 的标注
                 </p>
                 <div className="flex flex-row items-center justify-end space-x-2">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      setShowModal(false);
+                      navigate(`/`);
+                    }}
+                  >
+                    Home
+                  </button>
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={() => {

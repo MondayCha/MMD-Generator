@@ -14,4 +14,5 @@ from . import (
     user,
     annotation,
     task,
+    dataset,
 )

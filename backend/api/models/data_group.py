@@ -12,6 +12,8 @@ class DataGroup(db.Model):
     __tablename__ = "data_group"
 
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=True)
+    
     created = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
     osm_path = db.Column(db.String, nullable=False)
@@ -22,4 +24,4 @@ class DataGroup(db.Model):
         return hashids.encode(self.id)
 
     def __repr__(self):
-        return '<DataGroup {} {}>'.format(self.id, hashids.encode(self.id))
+        return '<DataGroup {} {}>'.format(self.id, self.hashid)

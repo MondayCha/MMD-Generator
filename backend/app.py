@@ -42,8 +42,9 @@ def create_app(config_class=Config):
     CORS(app, supports_credentials=True)
 
     # routes
-    from api.routes import api_router
+    from api.routes import api_router, media_router
     app.register_blueprint(api_router.bp)
+    app.register_blueprint(media_router.bp)
 
     return app
 

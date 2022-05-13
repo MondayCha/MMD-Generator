@@ -1,28 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '@services/api';
 import toast from 'react-hot-toast';
 import log from '@middleware/logger';
 import { useNavigate } from 'react-router-dom';
 import NavigationBar from '@/components/basic/NavigationBar';
-import { TaskDetail } from '@/services/type';
+import { AnnotationDetail } from '@/services/type';
 
-enum MatchingStatus {
-  idling,
-  uploading,
-  waiting,
-  downloading,
-  working,
-}
-
-function Home() {
+function Review() {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<TaskDetail[]>([]);
+  const [annotations, setAnnotations] = useState<AnnotationDetail[]>([]);
 
   useEffect(() => {
-    api.task.getTasks(2).then(({ detail }) => {
-      const tasks = detail as TaskDetail[];
-      setTasks(tasks);
+    api.annotate.getAnnotations().then(({ detail }) => {
+      setAnnotations(detail as AnnotationDetail[]);
     });
   }, []);
 
@@ -30,19 +20,19 @@ function Home() {
     <div className="max-w-screen min-h-screen bg-slate-50 dark:bg-slate-800">
       <NavigationBar />
       <div className="m-0 grid grid-flow-row grid-cols-4 flex-col gap-6 px-6 py-6 lg:px-36">
-        {tasks
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((task) => (
+        {annotations
+          .sort((a, b) => a.data_name.localeCompare(b.data_name))
+          .map((annotation) => (
             <div
-              key={`${task.name}${task.hashid}`}
+              key={`${annotation.hashid}`}
               className="card border-2 bg-white dark:border-0 dark:bg-slate-700 dark:shadow-md"
             >
               <div className="card-body m-0 p-4">
                 <div className="card-actions justify-between">
-                  <h3 className="text-lg font-semibold dark:text-white">{task.name}</h3>
+                  <h3 className="text-lg font-semibold dark:text-white">{annotation.data_name}</h3>
                   <button
                     className="btn btn-primary btn-sm"
-                    onClick={() => navigate(`/annotations/${task.hashid}/${task.name}`)}
+                    onClick={() => navigate(`/reviews/${annotation.hashid}`)}
                   >
                     检查
                   </button>
@@ -55,4 +45,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default Review;

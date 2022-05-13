@@ -15,6 +15,7 @@ import { RouteObject } from 'react-router-dom';
  */
 const Home = lazy(() => import('@pages/Home'));
 const Annotation = lazy(() => import('@/pages/Annotation'));
+const AnnotationReview = lazy(() => import('@/pages/Review'));
 const Login = lazy(() => import('@pages/Auth/Login'));
 const Review = lazy(() => import('@pages/Admin/Review'));
 const Upload = lazy(() => import('@pages/Admin/Upload'));
@@ -32,6 +33,10 @@ export const routerConfig: RouteObject[] = [
   {
     path: '/annotations/:groupHashid/:dataName',
     element: <Annotation />,
+  },
+  {
+    path: '/reviews/:annotationHashid',
+    element: <AnnotationReview />,
   },
   {
     path: '/admin',
