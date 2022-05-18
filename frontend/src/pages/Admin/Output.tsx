@@ -33,9 +33,10 @@ function Home() {
     });
   }, []);
 
-  const downloadDataset = (datasetId: string) => {
+  const downloadDataset = (datasetId: string, onlyTraj: boolean) => {
+    const format = onlyTraj ? 'txt' : 'json';
     api.dataset
-      .fetchDataset(datasetId)
+      .fetchDataset(datasetId, format)
       .then((blob) => {
         const a = document.createElement('a');
         a.href = window.URL.createObjectURL(blob);
@@ -58,19 +59,34 @@ function Home() {
               className="card border-2 bg-white dark:border-0 dark:bg-slate-700 dark:shadow-md"
             >
               <div className="card-body m-0 p-4">
-                <div className="card-actions items-center justify-between">
+                <div className="grid grid-cols-4 items-center gap-3">
                   <h3 className="text-lg font-semibold dark:text-white">{dataset.name}</h3>
-                  <progress
-                    className="progress progress-primary w-96"
-                    value={dataset.size.annotated}
-                    max={dataset.size.total}
-                  ></progress>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => downloadDataset(dataset.hashid)}
-                  >
-                    导出 JSON
-                  </button>
+                  <div className="col-span-2 flex w-full flex-col space-y-2">
+                    <progress
+                      className="progress progress-primary w-full"
+                      value={dataset.size.checked}
+                      max={dataset.size.total}
+                    ></progress>
+                    <progress
+                      className="progress progress-secondary w-full"
+                      value={dataset.size.annotated}
+                      max={dataset.size.total}
+                    ></progress>
+                  </div>
+                  <div className="flex flex-row items-center justify-end space-x-2">
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => downloadDataset(dataset.hashid, false)}
+                    >
+                      导出 JSON
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => downloadDataset(dataset.hashid, true)}
+                    >
+                      导出 TXT
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

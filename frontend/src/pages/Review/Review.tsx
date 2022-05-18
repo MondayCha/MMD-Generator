@@ -129,7 +129,7 @@ export default function Annotation() {
     appConfig.local_storage.animation.length,
     180
   );
-  const [showTrajIndex, setShowTrajIndex] = useState<number>(-2);
+  const [showTrajIndex, setShowTrajIndex] = useState<number>(-1);
 
   // Animation
   const [time, setTime] = useState<number>(0);
@@ -282,10 +282,12 @@ export default function Annotation() {
       if (accept) {
         api.annotate.reviewAnnotation(annotationHashid, 1, reviewComment).then(() => {
           toast.success('Accepted');
+          navigate(`/admin/review`);
         });
       } else {
         api.annotate.reviewAnnotation(annotationHashid, 0, reviewComment).then(() => {
           toast.success('Rejected');
+          navigate(`/admin/review`);
         });
       }
     }

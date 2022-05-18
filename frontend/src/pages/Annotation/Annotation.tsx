@@ -133,7 +133,25 @@ function annotationStateReducer(
 }
 
 // nebula.gl
-const initialFeaturesState = {
+type FTCoordinate = [number, number, null, number, number | string] | [number, number];
+
+interface LineStringFeatureType {
+  type: string;
+  properties: {
+    index: number[];
+  };
+  geometry: {
+    type: string;
+    coordinates: FTCoordinate[];
+  };
+}
+
+interface FeaturesType {
+  type: string;
+  features: LineStringFeatureType[];
+}
+
+const initialFeaturesState: FeaturesType = {
   type: 'FeatureCollection',
   features: [],
 };
@@ -160,7 +178,9 @@ export default function Annotation() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   // Nebula.gl State
-  const [features, setFeatures] = useState<any>(initialFeaturesState);
+  const [rawFeatures, setRawFeatures] = useState<FeaturesType>(initialFeaturesState);
+  const [sampleInterval, setSampleInterval] = useState<number>(1);
+  const [features, setFeatures] = useState<FeaturesType>(initialFeaturesState);
   const [selectedFeatureIndexes, setSelectedFeatureIndexes] = useState<number[]>([]);
   const [mode, setMode] = useState<any>(() => DrawRectangleMode);
   const [editState, setEditState] = useState(EditState.NONE);
@@ -254,7 +274,11 @@ export default function Annotation() {
     (result: MatchingResultDetail, options?: boolean) => {
       if (result) {
         const { bounds, raw_traj, matching_result, traj_name } = result;
-        const wasmAreas = pre_annotate(matching_result, options ?? autoMergeCircle);
+        const wasmAreas = pre_annotate(matching_result, {
+          auto_merge_circle: options ?? autoMergeCircle,
+          simplify_threshold: 1e-16,
+          disabled_annotators: [],
+        });
         setAllAreas(wasmAreas);
         log.info('[Pre Annotation]', wasmAreas);
         const areas_need_check = getMismatchedAreas(wasmAreas.mismatched_areas);
@@ -617,6 +641,8 @@ export default function Annotation() {
 
   const handleTrajModify = () => {
     if (editState === EditState.MODIFY_POINT) {
+      log.info('[Modify Points] features:', features);
+      log.info('[Modify Points] raw features:', rawFeatures);
       return;
     } else if (features.features.length === 0) {
       toast('未划定选区，将选择所有坐标', { id: 'draw-toast' });
@@ -678,7 +704,7 @@ export default function Annotation() {
         setViewState(initViewState);
       }
       log.info('[Filtered Traj]', filteredTraj);
-      setFeatures({
+      const newFeatures: FeaturesType = {
         type: 'FeatureCollection',
         features: [
           {
@@ -686,11 +712,14 @@ export default function Annotation() {
             properties: { index: filteredTraj.map((p) => p.index) },
             geometry: {
               type: 'LineString',
-              coordinates: filteredTraj.map((p) => p.coordinates),
+              coordinates: filteredTraj.map((p) => [...p.coordinates, null, p.index, p.timestamp]),
             },
           },
         ],
-      });
+      };
+      setRawFeatures(newFeatures);
+      setSampleInterval(1);
+      setFeatures(newFeatures);
       setMode(() => ModifyMode);
       setSelectedFeatureIndexes([0]);
     }
@@ -700,6 +729,7 @@ export default function Annotation() {
     if (
       editState !== EditState.MODIFY_POINT ||
       features.features.length === 0 ||
+      rawFeatures.features.length === 0 ||
       rawTraj.length === 0
     ) {
       toast.error('请先修正轨迹', { id: 'draw-toast' });
@@ -707,11 +737,14 @@ export default function Annotation() {
     }
     const modifiedLine = features.features[0];
     const indexes: number[] = modifiedLine.properties.index;
-    const coordinates: Position2D[] = modifiedLine.geometry.coordinates;
-    if (indexes.length != coordinates.length) {
+    const coordinates: FTCoordinate[] = modifiedLine.geometry.coordinates;
+    const rawIndexes: number[] = rawFeatures.features[0].properties.index;
+    if (indexes.length !== coordinates.length) {
       toast.error('修正轨迹时请不要添加或删除点，请重新选择区域', { id: 'draw-toast' });
       setSelectedFeatureIndexes([]);
       setFeatures(initialFeaturesState);
+      setRawFeatures(initialFeaturesState);
+      setSampleInterval(1);
       setEditState(EditState.DRAW_POLYGON);
       setMode(() => DrawRectangleMode);
       return;
@@ -721,13 +754,20 @@ export default function Annotation() {
     modifiedRawTraj.path.forEach((way, index) => {
       const order = indexes.findIndex((v) => v === index);
       if (order > -1) {
-        way.coordinates = coordinates[order];
+        way.coordinates = [coordinates[order][0], coordinates[order][1]];
       }
     });
+    modifiedRawTraj.path = modifiedRawTraj.path.filter(
+      (_, index) =>
+        rawIndexes.findIndex((v) => v === index) === -1 ||
+        indexes.findIndex((v) => v === index) > -1
+    );
     setRawTraj([modifiedRawTraj]);
     annotationDispatch({ type: 'endDraw' });
     setSelectedFeatureIndexes([]);
     setFeatures(initialFeaturesState);
+    setRawFeatures(initialFeaturesState);
+    setSampleInterval(1);
     setEditState(EditState.DONE);
     setCurrentArea([]);
     annotationDispatch({ type: 'endAnnotating' });
@@ -742,6 +782,8 @@ export default function Annotation() {
   const clearEditData = () => {
     annotationDispatch({ type: 'endDraw' });
     setFeatures(initialFeaturesState);
+    setRawFeatures(initialFeaturesState);
+    setSampleInterval(1);
     setEditState(EditState.NONE);
     setSelectedFeatureIndexes([]);
   };
@@ -761,6 +803,35 @@ export default function Annotation() {
     setLength(160);
     preAnnotation(sdkResult as MatchingResultDetail);
     log.info('[Reset All]', mismatchedAreas);
+  };
+
+  const handleSampleIntervalChange = (value: number) => {
+    setSampleInterval(value);
+    const rawFeature = rawFeatures.features[0];
+    if (!rawFeature) {
+      return;
+    }
+    const newFeatures = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            index: rawFeature.properties.index.filter(
+              (_, index) => index % value === 0 || index === rawFeature.properties.index.length - 1
+            ),
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: rawFeature.geometry.coordinates.filter(
+              (_, index) =>
+                index % value === 0 || index === rawFeature.geometry.coordinates.length - 1
+            ),
+          },
+        },
+      ],
+    };
+    setFeatures(newFeatures);
   };
 
   return (
@@ -967,7 +1038,12 @@ export default function Annotation() {
       </p>
       <div className="absolute right-0 top-8 bottom-8 flex w-52 flex-col items-stretch justify-between px-3 lg:bottom-6">
         <div className="flex flex-col">
-          <PreAnnotationCard onChange1={handleToggleMergeUTurns} />
+          <PreAnnotationCard
+            onChange1={handleToggleMergeUTurns}
+            sampleInterval={sampleInterval}
+            setSampleInterval={handleSampleIntervalChange}
+            isEditing={editState === EditState.MODIFY_POINT}
+          />
           <AnimationConfigCard />
           <AreaInfoCard
             fileName={dataName}
@@ -1038,7 +1114,7 @@ export default function Annotation() {
                   className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-primary pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
                   onClick={handleSubmit}
                 >
-                  <p className="text-3xl font-extrabold italic dark:opacity-70">Submit</p>
+                  <p className="text-3xl font-extrabold italic dark:opacity-70">提交结果</p>
                 </button>
               ) : (
                 <button
@@ -1087,9 +1163,11 @@ export default function Annotation() {
                       api.task.getTasks(1, 1).then(({ detail }) => {
                         const tasks = detail as TaskDetail[];
                         if (tasks.length > 0) {
+                          setIsLoading(true);
                           navigate(`/annotations/${tasks[0].hashid}/${tasks[0].name}`);
                         } else {
                           toast('No more tasks');
+                          navigate(`/`);
                         }
                       });
                     }}

@@ -22,15 +22,18 @@ pub fn greet() {
 }
 
 #[wasm_bindgen]
-pub fn pre_annotate(val: &JsValue, auto_merge_circle: bool) -> JsValue {
+pub fn pre_annotate(results: &JsValue, config: &JsValue) -> JsValue {
     utils::set_panic_hook();
-    let method_results: Vec<MethodResult> = val.into_serde().unwrap();
+    let mut method_results: Vec<MethodResult> = results.into_serde().unwrap();
+    let annotator_config: AnnotatorConfig = config.into_serde().unwrap();
+    method_results.retain(|result| {
+        !annotator_config
+            .disabled_annotators
+            .contains(&result.method_name)
+    });
     if method_results.len() < 2 {
         return JsValue::null();
     }
-    let annotator_config = AnnotatorConfig {
-        auto_merge_circle: auto_merge_circle,
-    };
     let mut annotator = PreAnnotator::new(&method_results[0], annotator_config);
     for i in 1..method_results.len() {
         annotator.add_sub_annotator(&method_results[i]);

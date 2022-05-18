@@ -125,22 +125,19 @@ function addBorrowedObject(obj) {
     return stack_pointer;
 }
 /**
-* @param {any} val
-* @param {boolean} auto_merge_circle
+* @param {any} results
+* @param {any} config
 * @returns {any}
 */
-export function pre_annotate(val, auto_merge_circle) {
+export function pre_annotate(results, config) {
     try {
-        const ret = wasm.pre_annotate(addBorrowedObject(val), auto_merge_circle);
+        const ret = wasm.pre_annotate(addBorrowedObject(results), addBorrowedObject(config));
         return takeObject(ret);
     } finally {
         heap[stack_pointer++] = undefined;
+        heap[stack_pointer++] = undefined;
     }
 }
-
-export function __wbg_alert_04bcdbc3eef6b600(arg0, arg1) {
-    alert(getStringFromWasm0(arg0, arg1));
-};
 
 export function __wbindgen_json_parse(arg0, arg1) {
     const ret = JSON.parse(getStringFromWasm0(arg0, arg1));
@@ -154,6 +151,10 @@ export function __wbindgen_json_serialize(arg0, arg1) {
     const len0 = WASM_VECTOR_LEN;
     getInt32Memory0()[arg0 / 4 + 1] = len0;
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
+};
+
+export function __wbg_alert_04bcdbc3eef6b600(arg0, arg1) {
+    alert(getStringFromWasm0(arg0, arg1));
 };
 
 export function __wbg_new_693216e109162396() {

@@ -21,4 +21,7 @@ const fetchMedia = (url: string) =>
     }
   });
 
-export const fetchDataset = (hashid: string) => fetchMedia(`${HOST_URL}/media/datasets/${hashid}`);
+type DatasetFormat = 'json' | 'txt';
+
+export const fetchDataset = (hashid: string, format: DatasetFormat) =>
+  fetchMedia(`${HOST_URL}/media/datasets/${hashid}/${format}`);

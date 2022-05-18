@@ -54,9 +54,15 @@ export interface PreprocessAreas {
     mismatched_areas: MisMatchedArea[];
 }
 
+export interface PreAnnotationConfig {
+    auto_merge_circle: boolean;
+    simplify_threshold: number;
+    disabled_annotators: AnnotatorType[];
+}
+
 /**
 * @param {MethodResult[]} val
 * @param {boolean} auto_merge_circle
 * @returns {PreprocessAreas}
 */
-export function pre_annotate(val: MethodResult[], auto_merge_circle: boolean): PreprocessAreas;
+export function pre_annotate(val: MethodResult[], config: PreAnnotationConfig): PreprocessAreas;

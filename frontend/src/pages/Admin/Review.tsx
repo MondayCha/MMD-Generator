@@ -28,13 +28,24 @@ function Review() {
               className="card border-2 bg-white dark:border-0 dark:bg-slate-700 dark:shadow-md"
             >
               <div className="card-body m-0 p-4">
-                <div className="card-actions justify-between">
-                  <h3 className="text-lg font-semibold dark:text-white">{annotation.data_name}</h3>
+                <h3 className="text-lg font-semibold dark:text-white">{annotation.data_name}</h3>
+                <div className="card-actions items-center justify-end">
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => navigate(`/reviews/${annotation.hashid}`)}
                   >
                     检查
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      api.annotate.reviewAnnotation(annotation.hashid, 1, '').then(() => {
+                        toast.success('Accepted');
+                        navigate(`/admin/review`);
+                      });
+                    }}
+                  >
+                    通过
                   </button>
                 </div>
               </div>

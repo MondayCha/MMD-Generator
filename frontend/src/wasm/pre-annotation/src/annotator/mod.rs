@@ -11,7 +11,7 @@ mod union_find;
 
 use lcs::LcsTable;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::vec::Vec;
 use union_find::UnionFind;
 
@@ -44,6 +44,67 @@ fn get_annotator_type(method_name: &str) -> AnnotatorType {
         "GHMapMatching" => AnnotatorType::GHMapMatching,
         _ => AnnotatorType::Annotator,
     }
+}
+
+fn get_simplified_traj(raw_traj: &Vec<Coordinate>, threshold: f64) -> Vec<Coordinate> {
+    if raw_traj.len() == 0 {
+        return vec![];
+    }
+    let mut simplified_traj: Vec<Coordinate> = vec![raw_traj[0].clone()];
+    let mut i = 0;
+    let mut j = 1;
+    while j + 1 < raw_traj.len() {
+        // vector 1: (x1, y1) = j - i
+        // vector 2: (x2, y2) = (j + 1) - i
+        let x1 = raw_traj[j].longitude - raw_traj[i].longitude;
+        let y1 = raw_traj[j].latitude - raw_traj[i].latitude;
+        let x2 = raw_traj[j + 1].longitude - raw_traj[i].longitude;
+        let y2 = raw_traj[j + 1].latitude - raw_traj[i].latitude;
+        if (x1 * y2 - y1 * x2).abs() < threshold && x1 * x2 > 0.0 && y1 * y2 > 0.0 {
+            // can be simplified
+            if j + 1 == raw_traj.len() - 1 {
+                simplified_traj.push(raw_traj[j + 1].clone());
+            }
+        } else {
+            // cannot be simplified
+            if j + 1 == raw_traj.len() - 1 {
+                simplified_traj.push(raw_traj[j].clone());
+                simplified_traj.push(raw_traj[j + 1].clone());
+            } else {
+                simplified_traj.push(raw_traj[j].clone());
+                i = j;
+            }
+        }
+        j += 1;
+    }
+    simplified_traj
+}
+
+#[test]
+fn test_get_simplified_traj() {
+    let node1 = Coordinate {
+        longitude: 12.44574999315478,
+        latitude: 52.70388691210494,
+    };
+    let node2 = Coordinate {
+        longitude: 12.44582263021672,
+        latitude: 52.70387212360696,
+    };
+    let node3 = Coordinate {
+        longitude: 12.447169887583774,
+        latitude: 52.703597829571315,
+    };
+    let node4 = Coordinate {
+        longitude: 12.44574999315478,
+        latitude: 52.70388691210494,
+    };
+    let a: Vec<Coordinate> = vec![node1, node2, node3, node4];
+    let b = get_simplified_traj(&a, 1e-4);
+    println!("{:?}", b);
+    assert_eq!(b.len(), 3);
+    assert_eq!(b[0], node1);
+    assert_eq!(b[1], node3);
+    assert_eq!(b[2], node4);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -124,9 +185,11 @@ struct SubAnnotator {
     traj: Vec<Coordinate>,
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AnnotatorConfig {
     pub auto_merge_circle: bool,
+    pub simplify_threshold: f64,
+    pub disabled_annotators: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -183,41 +246,70 @@ impl PreAnnotator {
             .into_iter()
             .map(|m| (m.owner.owner_type, m))
             .collect();
+        let threshold = self.annotator_config.simplify_threshold;
+        let sim_method_trajs: Vec<Vec<Coordinate>> = matching_methods
+            .iter()
+            .map(|m| get_simplified_traj(&m.traj, threshold))
+            .collect();
+
         let mut merged_sub_trajs: Vec<MergedSubTrajArray> = vec![];
         let mut method_union_find = UnionFind::new(&sub_annotators);
-        let mut prematched_failed_annotator_types: Vec<AnnotatorType> = vec![];
+        let mut prematched_failed_annotator_types: HashSet<AnnotatorType> =
+            HashSet::with_capacity(sub_annotators.len());
+
         for i in 0..matching_methods.len() {
             let i_traj = &matching_methods[i].traj;
+            let i_sim_traj = &sim_method_trajs[i];
             for j in i + 1..matching_methods.len() {
                 let j_traj = &matching_methods[j].traj;
-                let lcs_table = LcsTable::new(&matching_methods[i].traj, &matching_methods[j].traj);
-                let lcs_traj = lcs_table.longest_common_subsequence();
-
-                let can_union = i_traj.len() == lcs_traj.len() || lcs_traj.len() == j_traj.len();
-                if !can_union {
-                    continue;
-                }
-
+                let j_sim_traj = &sim_method_trajs[j];
+                // judge if the two trajs are the same
+                let mut i_j_can_union = false;
+                // choose which one to be union-find parent
                 let mut father = j;
                 let mut son = i;
-                if lcs_traj.len() == i_traj.len() {
-                    father = i;
-                    son = j;
-                }
 
-                if matching_methods[father].has_circle != matching_methods[son].has_circle {
+                // check if i and j can be unioned directly
+                let raw_lcs_table = LcsTable::new(&i_traj, &j_traj);
+                let raw_lcs_len = raw_lcs_table.longest_common_subsequence().len();
+                if i_traj.len() == raw_lcs_len || j_traj.len() == raw_lcs_len {
+                    if (i_sim_traj.len() as f32 / j_sim_traj.len() as f32) < 4.1
+                        && (j_sim_traj.len() as f32 / i_sim_traj.len() as f32) < 4.1
+                    {
+                        i_j_can_union = true;
+                    }
+                } else {
+                    let sim_lcs_table = LcsTable::new(&i_sim_traj, &j_sim_traj);
+                    let sim_lcs_len = sim_lcs_table.longest_common_subsequence().len();
                     if self.annotator_config.auto_merge_circle {
-                        prematched_failed_annotator_types
-                            .push(matching_methods[son].owner.owner_type);
+                        if i_sim_traj.len() == sim_lcs_len || j_sim_traj.len() == sim_lcs_len {
+                            i_j_can_union = true;
+                        }
                     } else {
-                        continue;
+                        if i_sim_traj.len() == j_sim_traj.len() && sim_lcs_len == i_sim_traj.len() {
+                            i_j_can_union = true;
+                        }
                     }
                 }
 
-                method_union_find.union(
-                    matching_methods[father].owner.owner_type,
-                    matching_methods[son].owner.owner_type,
-                );
+                if i_j_can_union {
+                    if i_traj.len() == raw_lcs_len {
+                        father = i;
+                        son = j;
+                    }
+                    if matching_methods[father].has_circle != matching_methods[son].has_circle {
+                        if self.annotator_config.auto_merge_circle {
+                            prematched_failed_annotator_types
+                                .insert(matching_methods[son].owner.owner_type);
+                        } else {
+                            continue;
+                        }
+                    }
+                    method_union_find.union(
+                        matching_methods[father].owner.owner_type,
+                        matching_methods[son].owner.owner_type,
+                    );
+                }
             }
         }
 
@@ -306,12 +398,22 @@ impl PreAnnotator {
         let mut matched_area_id = 1;
 
         let is_continuous = |last_index, current_index| {
-            for index_map in self.index_maps.values() {
-                if index_map[&last_index] + 1 == index_map[&current_index] {
-                    return true;
+            let config = &self.annotator_config;
+            if config.auto_merge_circle {
+                for index_map in self.index_maps.values() {
+                    if index_map[&last_index] + 1 == index_map[&current_index] {
+                        return true;
+                    }
                 }
+                false
+            } else {
+                for index_map in self.index_maps.values() {
+                    if index_map[&last_index] + 1 != index_map[&current_index] {
+                        return false;
+                    }
+                }
+                true
             }
-            false
         };
 
         if self.common_indexes.len() < 1 {
