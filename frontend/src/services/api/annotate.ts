@@ -13,6 +13,7 @@ export const uploadAnnotation = (
   analysis: string | undefined,
   rawTraj: string | undefined,
   bounds: string | undefined,
+  metric: string | undefined,
   comment: string
 ) => {
   let formData = new FormData();
@@ -22,6 +23,7 @@ export const uploadAnnotation = (
   analysis && formData.append('analysis', analysis);
   rawTraj && formData.append('raw_traj', rawTraj);
   bounds && formData.append('bounds', bounds);
+  metric && formData.append('metric', metric);
   comment.length > 0 && formData.append('comment', comment);
   return axiosInstance.post<unknown, AxiosResponseData<string>>(`annotations`, formData);
 };

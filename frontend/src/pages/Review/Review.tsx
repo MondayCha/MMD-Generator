@@ -481,13 +481,13 @@ export default function Annotation() {
               className="mt-1.5 flex h-16 w-full flex-row items-center justify-center rounded-lg bg-secondary pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
               onClick={() => handleSubmit(false)}
             >
-              <p className="text-2xl font-extrabold dark:opacity-70">拒绝标注</p>
+              <p className="text-2xl font-extrabold italic dark:opacity-70">拒绝标注</p>
             </button>
             <button
               className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-primary pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
               onClick={() => handleSubmit(true)}
             >
-              <p className="text-2xl font-extrabold dark:opacity-70">接受标注</p>
+              <p className="text-2xl font-extrabold italic dark:opacity-70">接受标注</p>
             </button>
           </div>
         </div>

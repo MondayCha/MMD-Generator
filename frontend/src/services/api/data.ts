@@ -13,10 +13,12 @@ export const getRawTrajMatching = (groupHashid: string | undefined, dataName: st
 
 export const getModifiedTrajMatching = (
   groupHashid: string | undefined,
+  dataName: string | undefined,
   modifiedTraj: string | Blob | undefined
 ) => {
   let formData = new FormData();
   groupHashid && formData.append('group_hashid', groupHashid);
+  dataName && formData.append('data_name', dataName);
   modifiedTraj && formData.append('raw_traj', modifiedTraj);
   return axiosInstance.post<unknown, AxiosResponseData<MatchingResultDetail>>(`matching`, formData);
 };

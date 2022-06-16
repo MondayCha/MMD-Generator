@@ -52,6 +52,9 @@ export interface PreprocessAreas {
     matched_areas: MatchedArea[];
     prematched_areas: PreMatchedArea[];
     mismatched_areas: MisMatchedArea[];
+    metric_u_turns_count: number,
+    metric_single_lcs_count: number,
+    metric_simplified_traj_count: number,
 }
 
 export interface PreAnnotationConfig {

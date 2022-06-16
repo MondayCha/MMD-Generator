@@ -69,7 +69,7 @@ def lcs(a, b):
 
 if __name__ == '__main__':
     print('start')
-    mmdg_folder = '/home/monday/documents/mmd-generator/backend/scripts/ieee2/'
+    mmdg_folder = '/home/monday/documents/mmd-generator/backend/scripts/simple/'
     ieee_folder = '/home/monday/documents/mmd-generator/backend/scripts/osm/'
     total_hit_count = 0
     total_hit_strip_count = 0
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         print(files)
         files.sort()
         for dir in files:
-            dir_id = dir.split('.')[0]
+            dir_id = dir.split('.')[0].split('-')[1]
             dir_ieee_path = os.path.join(ieee_folder, '%s.out.txt' % dir_id)
             if not os.path.exists(dir_ieee_path):
                 print('%s not exists' % dir_id)
@@ -108,10 +108,10 @@ if __name__ == '__main__':
 
             hit_rate = len(ieee_index) / len(ieee_list)
             hit_rate_strip = (len(ieee_index) + ieee_index[0] + len(ieee_list) - 1 -  ieee_index[len(ieee_index) - 1]) / len(ieee_list) if len(ieee_index) > 0 else 0
-            if hit_rate < 0.9:
-                print('ERROR: %s: %s, %s' % (dir_id, hit_rate, hit_rate_strip))
-            else:
-                print('%s: %s, %s' % (dir_id, hit_rate, hit_rate_strip))
+            # if hit_rate < 0.9:
+            #     print('ERROR: %s: %s, %s' % (dir_id, hit_rate, hit_rate_strip))
+            # else:
+            print('%s: %s' % (dir_id, hit_rate))
             # hit_rate_list.append(hit_rate)
     print(hit_rate_list)
     print('total hit rate: %s' % str(total_hit_count / total_count))

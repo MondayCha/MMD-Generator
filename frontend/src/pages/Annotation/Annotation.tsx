@@ -253,12 +253,26 @@ export default function Annotation() {
     appConfig.local_storage.pre_annotation.auto_merge_circle,
     true
   );
+  const [enableSTMatching, setEnableSTMatching] = useLocalStorage<boolean>(
+    appConfig.local_storage.pre_annotation.disable_st_matching,
+    true
+  );
+
+  // Test
+  const [startTime, setStartTime] = useState<number>();
 
   const handleToggleMergeUTurns = () => {
     const newState = !autoMergeCircle;
     setAutoMergeCircle(newState);
     resetAll();
-    preAnnotation(sdkResult as MatchingResultDetail, newState);
+    preAnnotation(sdkResult as MatchingResultDetail, { autoMergeCircle: newState });
+  };
+
+  const handleToggleSTMatching = () => {
+    const newState = !enableSTMatching;
+    setEnableSTMatching(newState);
+    resetAll();
+    preAnnotation(sdkResult as MatchingResultDetail, { enableSTMatching: newState });
   };
 
   const debounceCloseLoading = useMemo(
@@ -271,17 +285,24 @@ export default function Annotation() {
   );
 
   const preAnnotation = useCallback(
-    (result: MatchingResultDetail, options?: boolean) => {
+    (
+      result: MatchingResultDetail,
+      options?: { autoMergeCircle?: boolean; enableSTMatching?: boolean }
+    ) => {
       if (result) {
         const { bounds, raw_traj, matching_result, traj_name } = result;
         const wasmAreas = pre_annotate(matching_result, {
-          auto_merge_circle: options ?? autoMergeCircle,
+          auto_merge_circle: options?.autoMergeCircle ?? autoMergeCircle,
           simplify_threshold: 1e-16,
-          disabled_annotators: [],
+          disabled_annotators: options?.enableSTMatching
+            ? options.enableSTMatching
+              ? []
+              : ['STMatching']
+            : [],
         });
         setAllAreas(wasmAreas);
         log.info('[Pre Annotation]', wasmAreas);
-        const areas_need_check = getMismatchedAreas(wasmAreas.mismatched_areas);
+        const areas_need_check = getMismatchedAreas(wasmAreas.mismatched_areas ?? []);
         setMatchedPaths([
           ...wasmAreas.matched_areas.map((p) => ({
             id: p.id,
@@ -338,10 +359,13 @@ export default function Annotation() {
   );
 
   useEffect(() => {
-    api.data.getRawTrajMatching(groupHashid, dataName).then(({ detail }) => {
-      setSdkResult(detail as MatchingResultDetail);
-      preAnnotation(detail as MatchingResultDetail);
-    });
+    setStartTime(new Date().getTime());
+    groupHashid &&
+      dataName &&
+      api.data.getRawTrajMatching(groupHashid, dataName).then(({ detail }) => {
+        setSdkResult(detail as MatchingResultDetail);
+        preAnnotation(detail as MatchingResultDetail);
+      });
   }, [groupHashid, dataName]);
 
   const rawTrajLayers = useMemo(() => {
@@ -409,9 +433,9 @@ export default function Annotation() {
           data: area.optionalTrajs,
           pickable: true,
           widthUnits: 'pixels',
-          getWidth: 4,
+          getWidth: 8,
           getPath: (d) => d.trajectory,
-          getColor: (d) => [...d.color, 200],
+          getColor: (d) => [...d.color, 100],
           onClick: (o, e) => log.info('click unmatchedAreas', o.coordinate),
           visible: !showRawTraj && !isAnnotating,
         });
@@ -621,6 +645,15 @@ export default function Annotation() {
     });
     const mergedTraj = mergedPath.map((p) => ({ longitude: p[0], latitude: p[1] }));
     log.info('[Merged Path]', mergedPath);
+    const endTime = new Date().getTime();
+    const metric = {
+      u_turns_count: allAreas?.metric_u_turns_count,
+      single_lcs_count: allAreas?.metric_single_lcs_count,
+      simplified_traj_count: allAreas?.metric_simplified_traj_count,
+      mismatched_area_count: allAreas?.mismatched_areas.length,
+      prematched_area_count: allAreas?.prematched_areas.length,
+      time: startTime ? endTime - startTime : 0,
+    };
     api.annotate
       .uploadAnnotation(
         groupHashid,
@@ -629,6 +662,7 @@ export default function Annotation() {
         JSON.stringify(Array.from(analysis.entries())),
         JSON.stringify(sdkResult?.raw_traj),
         JSON.stringify(sdkResult?.bounds),
+        JSON.stringify(metric),
         comment
       )
       .then((res) => {
@@ -643,6 +677,12 @@ export default function Annotation() {
     if (editState === EditState.MODIFY_POINT) {
       log.info('[Modify Points] features:', features);
       log.info('[Modify Points] raw features:', rawFeatures);
+      setFeatures((prevFeatures) => {
+        return {
+          type: prevFeatures.type,
+          features: prevFeatures.features.slice(1),
+        };
+      });
       return;
     } else if (features.features.length === 0) {
       toast('未划定选区，将选择所有坐标', { id: 'draw-toast' });
@@ -704,18 +744,35 @@ export default function Annotation() {
         setViewState(initViewState);
       }
       log.info('[Filtered Traj]', filteredTraj);
+
+      let lineFeatures: LineStringFeatureType[] = [];
+      let start_index = 0;
+      let end_index = 0;
+      while (start_index < filteredTraj.length) {
+        end_index = start_index + 1;
+        while (end_index < filteredTraj.length) {
+          if (filteredTraj[end_index - 1].index + 1 !== filteredTraj[end_index].index) {
+            break;
+          }
+          end_index++;
+        }
+        const lineFeature: LineStringFeatureType = {
+          type: 'Feature',
+          properties: { index: filteredTraj.slice(start_index, end_index).map((p) => p.index) },
+          geometry: {
+            type: 'LineString',
+            coordinates: filteredTraj
+              .slice(start_index, end_index)
+              .map((p) => [...p.coordinates, null, p.index, p.timestamp]),
+          },
+        };
+        lineFeatures.push(lineFeature);
+        start_index = end_index;
+      }
+
       const newFeatures: FeaturesType = {
         type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            properties: { index: filteredTraj.map((p) => p.index) },
-            geometry: {
-              type: 'LineString',
-              coordinates: filteredTraj.map((p) => [...p.coordinates, null, p.index, p.timestamp]),
-            },
-          },
-        ],
+        features: lineFeatures,
       };
       setRawFeatures(newFeatures);
       setSampleInterval(1);
@@ -773,10 +830,13 @@ export default function Annotation() {
     annotationDispatch({ type: 'endAnnotating' });
     const modifiedTrajString = JSON.stringify(modifiedRawTraj);
     setIsLoading(true);
+    setCheckedAreas([]);
     toast('轨迹已修正，正在重新预标注', { id: 'pre-annotation' });
-    api.data.getModifiedTrajMatching(groupHashid, modifiedTrajString).then(({ detail }) => {
-      preAnnotation(detail as MatchingResultDetail);
-    });
+    api.data
+      .getModifiedTrajMatching(groupHashid, dataName, modifiedTrajString)
+      .then(({ detail }) => {
+        preAnnotation(detail as MatchingResultDetail);
+      });
   };
 
   const clearEditData = () => {
@@ -799,22 +859,24 @@ export default function Annotation() {
   const handleResetAll = () => {
     resetAll();
     setAutoMergeCircle(true);
+    setEnableSTMatching(true);
     setSpeed(80);
     setLength(160);
     preAnnotation(sdkResult as MatchingResultDetail);
+    setStartTime(new Date().getTime());
     log.info('[Reset All]', mismatchedAreas);
   };
 
   const handleSampleIntervalChange = (value: number) => {
     setSampleInterval(value);
     const rawFeature = rawFeatures.features[0];
-    if (!rawFeature) {
+    if (rawFeatures.features.length === 0) {
       return;
     }
     const newFeatures = {
       type: 'FeatureCollection',
-      features: [
-        {
+      features: rawFeatures.features.map((rawFeature) => {
+        return {
           type: 'Feature',
           properties: {
             index: rawFeature.properties.index.filter(
@@ -828,8 +890,8 @@ export default function Annotation() {
                 index % value === 0 || index === rawFeature.geometry.coordinates.length - 1
             ),
           },
-        },
-      ],
+        };
+      }),
     };
     setFeatures(newFeatures);
   };
@@ -1040,6 +1102,7 @@ export default function Annotation() {
         <div className="flex flex-col">
           <PreAnnotationCard
             onChange1={handleToggleMergeUTurns}
+            onChange2={handleToggleSTMatching}
             sampleInterval={sampleInterval}
             setSampleInterval={handleSampleIntervalChange}
             isEditing={editState === EditState.MODIFY_POINT}
@@ -1114,14 +1177,14 @@ export default function Annotation() {
                   className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-primary pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
                   onClick={handleSubmit}
                 >
-                  <p className="text-3xl font-extrabold italic dark:opacity-70">提交结果</p>
+                  <p className="text-2xl font-extrabold italic dark:opacity-70">提交结果</p>
                 </button>
               ) : (
                 <button
                   className="mt-1.5 flex h-16 flex-row items-center justify-center rounded-lg bg-primary pr-2 text-white bg-blend-darken transition duration-200 hover:brightness-95 active:brightness-90 "
                   onClick={showNextUncheckedArea}
                 >
-                  <p className="text-3xl font-extrabold italic dark:opacity-70">Start</p>
+                  <p className="text-2xl font-extrabold italic dark:opacity-70">开始标注</p>
                 </button>
               )}
             </div>

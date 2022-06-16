@@ -72,6 +72,7 @@ def map_matching():
     """
     if request.method == 'POST':
         req_group_hashid = request.form.get('group_hashid')
+        req_data_name = request.form.get('data_name')
         req_raw_traj = request.form.get('raw_traj')
         if req_group_hashid is None or req_raw_traj is None:
             return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'missing params')
@@ -83,19 +84,42 @@ def map_matching():
             raw_traj = json.loads(req_raw_traj)
             way_points = raw_traj['path']
             input_path, output_path, matching_path = create_user_modify_folder(current_user.id)
-            input_traj_name = '%s.txt' % current_user.id
+            input_traj_name = req_data_name
             f = open(os.path.join(input_path, input_traj_name), 'w')
             str = ''
-            for way_point in way_points:
-                str += '%s,%s,%s\n' % (way_point['coordinates'][0],way_point['coordinates'][1], way_point['timestamp'])
+            if group_id == 1:
+                for way_point in way_points:
+                    str += '%s\t%s\t%s\n' % (way_point['coordinates'][0],way_point['coordinates'][1], way_point['timestamp'])
+            else:
+                for way_point in way_points:
+                    str += '%s,%s,%s\n' % (way_point['coordinates'][0],way_point['coordinates'][1], way_point['timestamp'])
             f.write(str)
             f.close()
         except Exception:
             return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.NOT_FOUND, 'illegal group id')
             
-        matching_sdk_code, matching_sdk_dict = matching_for_data(osm_path, input_path, output_path)
-        if matching_sdk_code == 1:
-            return bad_request(status_code=HTTPStatus.INTERNAL_SERVER_ERROR,ret_status_code=RETStatus.SDK_ERR, detail=matching_sdk_dict)
+        if group_id == 1:
+            data_id = req_data_name.split('.')[0]   # 00000000
+            arcs_path = os.path.join(osm_path, data_id, '%s.arcs' % data_id)
+            nodes_path = os.path.join(osm_path, data_id, '%s.nodes' % data_id)
+            track_path = os.path.join(input_path, input_traj_name)
+            loading_cmd = 'java -cp %s com.example.ImportMatchingDataset --graphHopperLocation=/tmp/lowlevel-graph %s %s' % (current_app.config.get('SDK_IEEE_PATH'), nodes_path, arcs_path)
+            matching_code, matching_dict = cmd(loading_cmd)
+            if matching_code == 1:
+                current_app.logger.debug(matching_dict['stderr'])
+            matching_methods = current_app.config.get('MATCHING_METHODS')
+            for matching_method in matching_methods:
+                id_output_path = os.path.join(output_path, '%s-%s.track' % (matching_method, data_id))
+                running_cmd = 'java -cp %s com.example.RunMatchingDataset --graphHopperLocation=/tmp/lowlevel-graph --matcher %s --output=%s %s' % (current_app.config.get('SDK_IEEE_PATH'), matching_method, id_output_path, track_path)
+                matching_code, matching_dict = cmd(running_cmd)
+                current_app.logger.debug('[IEEE] %s: %s' % (matching_method, data_id))
+                if matching_code == 1:
+                    current_app.logger.debug('[Matching]', matching_dict['stderr'])
+                    continue
+        else:
+            matching_sdk_code, matching_sdk_dict = matching_for_data(osm_path, input_path, output_path)
+            if matching_sdk_code == 1:
+                return bad_request(status_code=HTTPStatus.INTERNAL_SERVER_ERROR,ret_status_code=RETStatus.SDK_ERR, detail=matching_sdk_dict)
 
         matching_method_names = current_app.config.get('MATCHING_METHODS')
         success_matching_time = 0

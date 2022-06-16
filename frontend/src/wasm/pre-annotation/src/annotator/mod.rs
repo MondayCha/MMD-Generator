@@ -177,6 +177,9 @@ pub struct PreprocessAreas {
     matched_areas: Vec<MatchedArea>,
     prematched_areas: Vec<PreMatchedArea>,
     mismatched_areas: Vec<MisMatchedArea>,
+    metric_u_turns_count: usize,
+    metric_single_lcs_count: usize,
+    metric_simplified_traj_count: usize,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -200,6 +203,10 @@ pub struct PreAnnotator {
     index_maps: HashMap<AnnotatorType, HashMap<usize, usize>>,
     sub_annotators: HashMap<AnnotatorType, SubAnnotator>,
     // unmerged_mismatched_all_trajs: Vec<Vec<SubTrajArray>>,
+    // metrics
+    metric_u_turns_count: usize,
+    metric_single_lcs_count: usize,
+    metric_simplified_traj_count: usize,
 }
 
 /// PreAnnotator is used to annotate the trajectory with the matched area.
@@ -230,11 +237,14 @@ impl PreAnnotator {
             index_maps: index_maps,
             sub_annotators: sub_annotators,
             // unmerged_mismatched_all_trajs: vec![],
+            metric_u_turns_count: 0,
+            metric_single_lcs_count: 0,
+            metric_simplified_traj_count: 0,
         }
     }
 
     fn generate_mismatched_area_from_sub_trajs(
-        &self,
+        &mut self,
         id: usize,
         matching_methods: &Vec<SubTrajArray>,
     ) -> EitherMatchedArea {
@@ -293,6 +303,7 @@ impl PreAnnotator {
                 }
 
                 if i_j_can_union {
+                    self.metric_simplified_traj_count += 1;
                     if i_traj.len() == raw_lcs_len {
                         father = i;
                         son = j;
@@ -344,6 +355,8 @@ impl PreAnnotator {
             merged_sub_trajs.push(merged_sub_traj);
         }
 
+        self.metric_u_turns_count += prematched_failed_annotator_types.len();
+
         if merged_sub_trajs.len() > 1 {
             EitherMatchedArea::MisMatched(MisMatchedArea {
                 id: id,
@@ -392,7 +405,7 @@ impl PreAnnotator {
         }
     }
 
-    pub fn generate_matched_areas(&self) -> PreprocessAreas {
+    pub fn generate_matched_areas(&mut self) -> PreprocessAreas {
         let baseline_traj = &self.sub_annotators[&self.baseline_annotator_type].traj;
         let mut matched_areas: Vec<MatchedArea> = vec![];
         let mut matched_area_id = 1;
@@ -421,6 +434,9 @@ impl PreAnnotator {
                 matched_areas: matched_areas,
                 prematched_areas: vec![],
                 mismatched_areas: vec![],
+                metric_u_turns_count: self.metric_u_turns_count,
+                metric_single_lcs_count: self.metric_single_lcs_count,
+                metric_simplified_traj_count: self.metric_simplified_traj_count,
             };
         }
 
@@ -454,6 +470,8 @@ impl PreAnnotator {
                     },
                 });
                 matched_area_id += 2;
+            } else {
+                self.metric_single_lcs_count += 1;
             }
             area_start = current_index;
         }
@@ -542,6 +560,9 @@ impl PreAnnotator {
             matched_areas: matched_areas,
             prematched_areas: prematched_areas,
             mismatched_areas: mismatched_areas,
+            metric_u_turns_count: self.metric_u_turns_count,
+            metric_single_lcs_count: self.metric_single_lcs_count,
+            metric_simplified_traj_count: self.metric_simplified_traj_count,
         }
     }
 }

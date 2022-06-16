@@ -46,6 +46,7 @@ def upload_annotation():
         req_data_annotation = request.form.get('annotation')
         req_raw_traj = request.form.get('raw_traj')
         req_bounds = request.form.get('bounds')
+        req_metric = request.form.get('metric')
         req_comment = request.form.get('comment')
 
         if req_group_hashid is None or req_data_name is None:
@@ -61,9 +62,11 @@ def upload_annotation():
             data_analysis = json.loads(req_data_analysis)
             data_raw_traj = json.loads(req_raw_traj)
             data_bounds = json.loads(req_bounds)
+            data_metric = json.loads(req_metric)
             data_annotation_path = get_matching_path(group_id)
             input_traj_name = 'annotation-%s-%s.json' % (current_user.id, req_data_name)
             data_path = os.path.join(data_annotation_path, input_traj_name)
+            user_path = os.path.join(data_annotation_path, 'user-%s.txt' % current_user.id)
             with open(data_path, 'w') as f:
                 json.dump({
                     'group_hashid': req_group_hashid,
@@ -76,6 +79,11 @@ def upload_annotation():
                     'annotator': current_user.username,
                 }, f)
                 f.close()
+            with open(user_path, 'a') as f:
+                # {"u_turns_count":0,"single_lcs_count":0,"simplified_traj_count":1,"mismatched_area_count":1,"prematched_area_count":0,"time":5536}
+                csv_line = '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' % (req_data_name, data_metric['u_turns_count'], data_metric['single_lcs_count'], data_metric['simplified_traj_count'], data_metric['mismatched_area_count'], data_metric['prematched_area_count'], data_metric['time'])
+                f.write(csv_line)
+                f.close()
         except Exception:
             return bad_request(RETStatus.PARAM_INVALID, HTTPStatus.INTERNAL_SERVER_ERROR)
 
@@ -85,14 +93,20 @@ def upload_annotation():
                 new_annotation = Annotation(data_id=current_data.id, annotator_id=current_user.id, path=data_path, comment=req_comment)
             else:
                 new_annotation = Annotation(data_id=current_data.id, annotator_id=current_user.id, path=data_path)
+            if current_user.usertype == 0:
+                new_annotation.status = 1
             db.session.add(new_annotation)
             db.session.commit()
             if current_data.status != 2:
-                current_data.status = 2
+                current_data.status = 3 if current_user.usertype == 0 else 2
                 db.session.add(current_data)
                 db.session.commit()
         elif req_comment is not None:
             same_annotation.comment = req_comment
+            if current_user.usertype == 0:
+                same_annotation.status = 1
+            else:
+                same_annotation.status = -1
             db.session.add(same_annotation)
             db.session.commit()
 

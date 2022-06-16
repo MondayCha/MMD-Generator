@@ -31,10 +31,10 @@ const AnimationConfigCard = () => {
             type="number"
             className="input input-bordered input-xs w-16 max-w-xs font-mono"
             value={length}
-            max={500}
+            max={1000}
             min={0}
             onChange={(e) => {
-              setLength(Math.min(Math.max(Number(e.target.value), 0), 500));
+              setLength(Math.min(Math.max(Number(e.target.value), 0), 1000));
             }}
           />
         </div>

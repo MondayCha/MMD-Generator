@@ -6,21 +6,26 @@ interface PreAnnotationCardProps {
   sampleInterval: number;
   setSampleInterval: (sampleInterval: number) => void;
   onChange1: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange2: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const PreAnnotationCard = (props: PreAnnotationCardProps) => {
-  const { onChange1, isEditing, sampleInterval, setSampleInterval } = props;
+  const { onChange1, onChange2, isEditing, sampleInterval, setSampleInterval } = props;
   const [autoMergeCircle] = useLocalStorage<boolean>(
     appConfig.local_storage.pre_annotation.auto_merge_circle,
+    true
+  );
+  const [enableSTMatching] = useLocalStorage<boolean>(
+    appConfig.local_storage.pre_annotation.disable_st_matching,
     true
   );
 
   return (
     <>
       <div className="mdc-card-header mb-1.5">标注设置</div>
-      <div className="mdc-card-body flex-row items-center justify-between px-4">
+      <div className="mdc-card-body flex flex-col space-y-3 px-4">
         {isEditing ? (
-          <>
+          <div className="flex flex-row items-center justify-between">
             <p className="text-sm">采样间隔</p>
             <input
               type="number"
@@ -32,18 +37,35 @@ const PreAnnotationCard = (props: PreAnnotationCardProps) => {
                 setSampleInterval(Math.max(Number(e.target.value), 1));
               }}
             />
-          </>
+          </div>
         ) : (
           <>
-            <p className="text-sm">Merge U-turns</p>
-            <input
-              type="checkbox"
-              className={`toggle toggle-xs border-slate-300 ${
-                autoMergeCircle ? 'bg-primary dark:bg-slate-400' : 'bg-slate-300 dark:bg-slate-600'
-              } dark:border-slate-600`}
-              checked={autoMergeCircle}
-              onChange={onChange1}
-            />
+            <div className="flex w-full flex-row items-center justify-between">
+              <p className="text-sm">Merge U-turns</p>
+              <input
+                type="checkbox"
+                className={`toggle toggle-xs border-slate-300 ${
+                  autoMergeCircle
+                    ? 'bg-primary dark:bg-slate-400'
+                    : 'bg-slate-300 dark:bg-slate-600'
+                } dark:border-slate-600`}
+                checked={autoMergeCircle}
+                onChange={onChange1}
+              />
+            </div>
+            <div className="flex w-full flex-row items-center justify-between">
+              <p className="text-sm">STMatching</p>
+              <input
+                type="checkbox"
+                className={`toggle toggle-xs border-slate-300 ${
+                  autoMergeCircle
+                    ? 'bg-primary dark:bg-slate-400'
+                    : 'bg-slate-300 dark:bg-slate-600'
+                } dark:border-slate-600`}
+                checked={enableSTMatching}
+                onChange={onChange2}
+              />
+            </div>
           </>
         )}
       </div>
